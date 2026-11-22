@@ -83,7 +83,7 @@ button:disabled{opacity:.55;cursor:wait}
 .popup-trailer,.popup-range{font-size:1.05rem;font-weight:700;margin:.35rem 0}
 .popup-trailer.yes,.popup-range.ok{color:#7dffa8} .popup-trailer.maybe,.popup-range.tight{color:#ffe08a} .popup-trailer.no,.popup-range.oor{color:#ffb4b4}
 .popup-links{display:grid;grid-template-columns:1fr;gap:.45rem;margin:.65rem 0 .35rem}
-.popup-links a{display:block;width:100%;text-align:center;font-weight:700;font-size:1.05rem;padding:.75rem;border-radius:10px;border:2px solid var(--border);text-decoration:none;min-height:48px;color:#fff}
+.popup-links a{display:block;width:100%;text-align:center;font-weight:700;font-size:1.05rem;padding:.75rem;border-radius:10px;border:2px solid var(--border);text-decoration:none;min-height:48px;color:#fff;touch-action:manipulation;pointer-events:auto}
 .popup-links a.streetview{background:#2a5f8f;border-color:#1e4a70}
 .popup-links a.directions{background:#3d5a40;border-color:#2d4530}
 .popup-actions{display:grid;grid-template-columns:1fr;gap:.45rem;margin-top:.75rem}
@@ -477,6 +477,48 @@ function paintMarker(marker, station, colorName){
   marker.setIcon(pinIcon(station.network, colorName, hasNote(station.id)));
   armMarkerTap(marker);
 }
+function armPopupLinks(popup){
+  const root=popup&&popup.getElement&&popup.getElement();
+  if(!root||root._evTrailerLinks) return;
+  root._evTrailerLinks=true;
+  // Leaflet's disableClickPropagation stops touchstart on the popup. iOS Safari
+  // then never clicks an <a> inside it, so Street View and Directions do nothing.
+  root.addEventListener('touchend', function(e){
+    const a=e.target.closest&&e.target.closest('a.streetview, a.directions');
+    if(!a||!root.contains(a)) return;
+    const href=a.href;
+    if(!href) return;
+    e.preventDefault();
+    e.stopPropagation();
+    a._openedByTouch=true;
+    const opened=window.open(href, '_blank', 'noopener,noreferrer');
+    if(opened) opened.opener=null;
+  }, {passive:false});
+  root.addEventListener('click', function(e){
+    const a=e.target.closest&&e.target.closest('a.streetview, a.directions');
+    if(!a||!a._openedByTouch) return;
+    a._openedByTouch=false;
+    e.preventDefault();
+  });
+}
+function syncPopupColorState(id, col){
+  const popup=document.querySelector('.leaflet-popup');
+  if(!popup) return;
+  const labels={blue:'Blue = regular', yellow:'Yellow = fits trailer', green:'Green = trailer charger'};
+  popup.querySelectorAll('[data-set-color]').forEach(btn=>{
+    if(btn.getAttribute('data-id')!==id) return;
+    const c=btn.getAttribute('data-set-color');
+    const on=c===col;
+    btn.setAttribute('aria-pressed', on?'true':'false');
+    btn.textContent=labels[c]+(on?' (current)':'');
+  });
+  const tr=popup.querySelector('.popup-trailer');
+  if(tr){
+    const info=trailerInfo(id);
+    tr.className='popup-trailer '+info.cls;
+    tr.textContent=info.text;
+  }
+}
 function popupOptions(){
   const h=map&&map.getSize ? Math.max(200, Math.round(map.getSize().y*0.78)) : 320;
   return {maxWidth:320, maxHeight:h, autoPan:true, autoPanPadding:[10,10]};
@@ -675,12 +717,26 @@ function applyFilters(){
 function recolourMarker(id){
   const m=markerById.get(id), s=getStation(id);
   if(!m||!s) return;
-  const open=m.isPopupOpen&&m.isPopupOpen();
   const col=getColor(id);
-  paintMarker(m, s, col);
-  m.setPopupContent(popupHtml(s));
-  applyFilters();
-  if(open && m.openPopup) m.openPopup();
+  const popup=m.getPopup&&m.getPopup();
+  const popupEl=popup&&popup.getElement&&popup.getElement();
+  const scroller=popupEl&&popupEl.querySelector('.leaflet-popup-content');
+  const scrollTop=scroller?scroller.scrollTop:0;
+  const wasOpen=m.isPopupOpen&&m.isPopupOpen();
+  const want=markerLayerFor(col);
+  if(want && !want.hasLayer(m)){
+    // Removing the marker fires closePopup. Keep the open popup's DOM as it is.
+    if(wasOpen) m.off('remove', m.closePopup);
+    paintMarker(m, s, col);
+    attachMarker(m, col);
+    if(wasOpen) m.on('remove', m.closePopup);
+  }else{
+    paintMarker(m, s, col);
+  }
+  syncPopupColorState(id, col);
+  if(scroller) scroller.scrollTop=scrollTop;
+  updateCounts();
+  renderDetourList();
 }
 function refreshSoloIcons(){
   if(!map) return;
@@ -764,6 +820,7 @@ function initMap(){
   map.addLayer(markersLayer);
   map.addLayer(soloLayer);
   map.on('layeradd', (e)=>{ if(e.layer&&e.layer.getElement) armMarkerTap(e.layer); });
+  map.on('popupopen', (e)=>{ if(e.popup) armPopupLinks(e.popup); });
   map.on('zoomend', refreshSoloIcons);
   buildMarkers();
   if(STATIONS.length) map.fitBounds(L.latLngBounds(STATIONS.map(s=>[s.lat,s.lon])).pad(0.05), {animate:false});
