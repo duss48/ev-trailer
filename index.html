@@ -46,8 +46,8 @@ button:disabled{opacity:.55;cursor:wait}
 #route-summary.show{display:block}
 #route-summary .muted{color:var(--muted);font-weight:400;font-size:.95rem}
 #main{flex:0 0 auto;width:100%;display:flex;flex-flow:row wrap;align-items:flex-start;position:relative}
-#map-stage{position:relative;flex:0 0 auto;width:min(100%,100vh);width:min(100%,100dvh);max-width:100%}
-#map{width:100%;aspect-ratio:1/1;height:auto;background:#0c1218}
+#map-stage{position:relative;flex:0 0 auto;width:100%;max-width:100%}
+#map{width:100%;height:75vh;height:75dvh;background:#0c1218}
 #detour-panel{display:none;flex:1 1 280px;width:min(440px,100%);min-width:min(100%,280px);max-height:100vh;max-height:100dvh;background:var(--panel);border-left:2px solid var(--border);overflow:auto;flex-direction:column}
 #detour-panel.show{display:flex}
 #detour-panel header{position:sticky;top:0;background:var(--panel);border-bottom:2px solid var(--border);padding:.65rem .75rem;z-index:2}
@@ -85,7 +85,18 @@ button:disabled{opacity:.55;cursor:wait}
 .popup-links{display:grid;grid-template-columns:1fr;gap:.45rem;margin:.65rem 0 .35rem}
 .popup-links a{display:block;width:100%;text-align:center;font-weight:700;font-size:1.05rem;padding:.75rem;border-radius:10px;border:2px solid var(--border);text-decoration:none;min-height:48px;color:#fff;touch-action:manipulation;pointer-events:auto}
 .popup-links a.streetview{background:#2a5f8f;border-color:#1e4a70}
-.popup-links a.directions{background:#3d5a40;border-color:#2d4530}
+.popup-links button.directions{display:block;width:100%;text-align:center;font-weight:700;font-size:1.05rem;padding:.75rem;border-radius:10px;min-height:48px;color:#fff;background:#3d5a40;border:2px solid #2d4530;touch-action:manipulation}
+#steps-panel{display:none;background:#121821;border-top:2px solid var(--border);padding:.85rem .9rem 1.1rem;font-style:normal;text-transform:none}
+#steps-panel.show{display:block}
+#steps-panel h2{margin:0 0 .35rem;font-size:1.4rem;font-weight:700;font-style:normal;text-transform:none}
+#steps-head{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin-bottom:.4rem}
+#steps-summary{font-size:1.3rem;font-weight:700;margin:0;font-style:normal;text-transform:none}
+#steps-list{list-style:decimal;margin:.35rem 0 0;padding:0 0 0 1.5rem;max-height:50dvh;overflow:auto}
+#steps-list li{font-size:1.2rem;line-height:1.5;font-weight:400;font-style:normal;text-transform:none;margin:.45rem 0;padding:.15rem 0}
+#steps-list .step-dist{display:block;color:var(--muted);font-size:1.05rem;font-weight:700}
+#steps-google{display:inline-block;margin-top:.75rem;color:#cde4ff;font-size:1rem;font-weight:700;font-style:normal;text-transform:none}
+#steps-error{color:#ffb4b4;font-size:1.15rem;font-weight:700;margin:.4rem 0 0}
+#btn-steps-clear{min-height:48px}
 .popup-actions{display:grid;grid-template-columns:1fr;gap:.45rem;margin-top:.75rem}
 .popup-actions button{width:100%;font-weight:700;font-size:1.05rem;padding:.7rem}
 .notes-box{margin-top:.75rem;border-top:2px solid var(--border);padding-top:.65rem}
@@ -109,6 +120,9 @@ button:disabled{opacity:.55;cursor:wait}
 .badge.badge-dot::before{content:"";width:14px;height:14px;border-radius:50%;background:var(--fill,#1f9d55);border:2px solid #111;box-shadow:0 1px 3px rgba(0,0,0,.5)}
 .badge.badge-dot .note-dot{right:12px;top:12px;width:10px;height:10px}
 .popup-actions button,.leaflet-popup-content button{min-height:44px;touch-action:manipulation}
+.you-are-here{background:none!important;border:none!important}
+.you-dot{display:block;width:18px;height:18px;border-radius:50%;background:#ff3b30;border:3px solid #fff;box-shadow:0 0 0 2px #111}
+.you-label{position:absolute;left:26px;top:-2px;background:#111;color:#fff;font-weight:700;font-size:15px;line-height:1.2;padding:.25rem .5rem;border-radius:8px;white-space:nowrap;font-style:normal;text-transform:none}
 .toast-copy{position:fixed;left:50%;bottom:5.5rem;transform:translateX(-50%);background:#243044;color:var(--text);border:2px solid var(--border);padding:.55rem .9rem;border-radius:10px;z-index:3000;font-weight:700;display:none}
 .toast-copy.show{display:block}
 @media(max-width:820px){#main{flex-direction:column}#detour-panel{width:100%;max-height:70dvh;border-left:none;border-top:2px solid var(--border)}}
@@ -173,6 +187,16 @@ button:disabled{opacity:.55;cursor:wait}
     <ul id="detour-list"></ul>
   </aside>
 </div>
+<section id="steps-panel" aria-label="Turn by turn directions">
+  <div id="steps-head">
+    <h2>Directions</h2>
+    <button type="button" id="btn-steps-clear">Clear route</button>
+  </div>
+  <p id="steps-summary"></p>
+  <p id="steps-error"></p>
+  <ol id="steps-list"></ol>
+  <a id="steps-google" href="#" target="_blank" rel="noopener noreferrer" hidden>Open in Google Maps</a>
+</section>
 <div id="legend">
   <strong>Show:</strong>
   <label class="swatch"><input type="checkbox" id="f-blue" checked><span class="dot blue"></span> Blue = regular</label>
@@ -224,6 +248,8 @@ let notes = loadJSON(NOTES_KEY, {});
 let settings = Object.assign({}, DEFAULT_SETTINGS, loadJSON(SETTINGS_KEY, {}));
 let fontPx = Number(localStorage.getItem(FONT_KEY) || 18);
 let routeLayer = null, startMarker = null, endMarker = null, youMarker = null, rangeMarker = null;
+let here = null;
+let mapDragged = false;
 let routeState = null, pickMode = null, pendingDest = null;
 let detourById = new Map();
 const iconCache = new Map();
@@ -481,10 +507,30 @@ function armPopupLinks(popup){
   const root=popup&&popup.getElement&&popup.getElement();
   if(!root||root._evTrailerLinks) return;
   root._evTrailerLinks=true;
-  // Leaflet's disableClickPropagation stops touchstart on the popup. iOS Safari
-  // then never clicks an <a> inside it, so Street View and Directions do nothing.
+  function beginRoute(btn){
+    if(document._routeBusy) return;
+    document._routeBusy=true;
+    document._routeTouchAt=Date.now();
+    setTimeout(function(){ document._routeBusy=false; }, 800);
+    startPopupDirections(btn);
+  }
+  root.addEventListener('click', function(e){
+    const btn=e.target.closest&&e.target.closest('[data-route-lat]');
+    if(!btn||!root.contains(btn)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    beginRoute(btn);
+  }, true);
   root.addEventListener('touchend', function(e){
-    const a=e.target.closest&&e.target.closest('a.streetview, a.directions');
+    const btn=e.target.closest&&e.target.closest('[data-route-lat]');
+    if(!btn||!root.contains(btn)) return;
+    e.stopPropagation();
+    beginRoute(btn);
+  }, true);
+  // Leaflet's disableClickPropagation stops touchstart on the popup. iOS Safari
+  // then never clicks an <a> inside it, so Street View does nothing.
+  root.addEventListener('touchend', function(e){
+    const a=e.target.closest&&e.target.closest('a.streetview');
     if(!a||!root.contains(a)) return;
     const href=a.href;
     if(!href) return;
@@ -495,7 +541,7 @@ function armPopupLinks(popup){
     if(opened) opened.opener=null;
   }, {passive:false});
   root.addEventListener('click', function(e){
-    const a=e.target.closest&&e.target.closest('a.streetview, a.directions');
+    const a=e.target.closest&&e.target.closest('a.streetview');
     if(!a||!a._openedByTouch) return;
     a._openedByTouch=false;
     e.preventDefault();
@@ -630,7 +676,6 @@ function popupHtml(s){
   const col=getColor(s.id);
   const lat=Number(s.lat), lon=Number(s.lon);
   const streetView=`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lon}`;
-  const directions=`https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
   const mapsPlace=`https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
   const det=detourById.get(s.id);
   const detourLine=det?`<p class="popup-detour">+${Math.round(det.addedSec/60)} min detour · ${formatKm(det.alongM)} into trip</p>`:'';
@@ -643,6 +688,10 @@ function popupHtml(s){
   const noteText=(notes[s.id]&&notes[s.id].text)||'';
   return `
     <div class="popup-title">${escapeHtml(s.name)}</div>
+    <div class="popup-links">
+      <button type="button" class="directions" data-route-lat="${lat}" data-route-lon="${lon}" data-route-name="${escapeHtml(s.name)}">Directions</button>
+      <a class="streetview" href="${escapeHtml(streetView)}" target="_blank" rel="noopener noreferrer">Street View</a>
+    </div>
     <a class="popup-address" href="${escapeHtml(mapsPlace)}" target="_blank" rel="noopener noreferrer" data-copy-address="${escapeHtml(s.address)}">${escapeHtml(s.address||(lat+', '+lon))}</a>
     <p class="popup-meta"><strong>Where:</strong> ${escapeHtml(s.city||"")} ${escapeHtml(s.prov||"")} ${escapeHtml(s.country||"")}</p>
     <p class="popup-meta"><strong>Network:</strong> ${escapeHtml(s.network)}</p>
@@ -650,10 +699,6 @@ function popupHtml(s){
     <p class="popup-meta"><strong>DC ports:</strong> ${escapeHtml(s.ports)}</p>
     <p class="popup-trailer ${tr.cls}">${escapeHtml(tr.text)}</p>
     ${rangeLine}${detourLine}
-    <div class="popup-links">
-      <a class="streetview" href="${escapeHtml(streetView)}" target="_blank" rel="noopener noreferrer">Street View</a>
-      <a class="directions" href="${escapeHtml(directions)}" target="_blank" rel="noopener noreferrer">Directions</a>
-    </div>
     <div class="popup-actions">
       <button type="button" class="color-blue" data-set-color="blue" data-id="${escapeHtml(s.id)}">Blue = regular${col==='blue'?' (current)':''}</button>
       <button type="button" class="color-yellow" data-set-color="yellow" data-id="${escapeHtml(s.id)}">Yellow = fits trailer${col==='yellow'?' (current)':''}</button>
@@ -824,6 +869,8 @@ function initMap(){
   map.on('zoomend', refreshSoloIcons);
   buildMarkers();
   if(STATIONS.length) map.fitBounds(L.latLngBounds(STATIONS.map(s=>[s.lat,s.lon])).pad(0.05), {animate:false});
+  map.on('dragstart', ()=>{ mapDragged=true; });
+  locateOnLoad();
   map.on('click',(e)=>{
     if(pickMode!=='start') return;
     pickMode=null; setPickBanner('');
@@ -872,22 +919,124 @@ async function geocode(query){
   if(!data||!data.length) throw new Error('No match for that address');
   return {lat:+data[0].lat, lon:+data[0].lon, label:data[0].display_name};
 }
+function placeYouMarker(lat, lon){
+  if(!map) return;
+  if(youMarker) map.removeLayer(youMarker);
+  youMarker=L.marker([lat, lon], {
+    interactive:false,
+    keyboard:false,
+    icon:L.divIcon({
+      className:'you-are-here',
+      html:'<span class="you-dot"></span><span class="you-label">You are here</span>',
+      iconSize:[140,28],
+      iconAnchor:[14,14]
+    })
+  }).addTo(map);
+  here={lat, lon, label:'My location'};
+}
 function getCurrentPosition(){
   return new Promise((resolve,reject)=>{
     if(!navigator.geolocation){ reject(new Error('Geolocation is not available on this device.')); return; }
     navigator.geolocation.getCurrentPosition(
-      pos=>resolve({lat:pos.coords.latitude, lon:pos.coords.longitude, label:'My location'}),
+      pos=>{
+        const loc={lat:pos.coords.latitude, lon:pos.coords.longitude, label:'My location'};
+        here=loc;
+        resolve(loc);
+      },
       err=>reject(err),
-      {enableHighAccuracy:true, timeout:15000, maximumAge:60000}
+      {enableHighAccuracy:true, timeout:8000, maximumAge:60000}
     );
   });
 }
+function locateOnLoad(){
+  if(!navigator.geolocation||!map) return;
+  let settled=false;
+  const timer=setTimeout(()=>{ settled=true; }, 8000);
+  navigator.geolocation.getCurrentPosition(pos=>{
+    if(settled) return;
+    clearTimeout(timer);
+    const lat=pos.coords.latitude, lon=pos.coords.longitude;
+    placeYouMarker(lat, lon);
+    if(!mapDragged) map.setView([lat, lon], 11, {animate:false});
+  }, ()=>{ clearTimeout(timer); }, {enableHighAccuracy:false, timeout:8000, maximumAge:120000});
+}
 async function fetchOsrmRoute(start,end){
-  const url=`${OSRM}/route/v1/driving/${start.lon},${start.lat};${end.lon},${end.lat}?overview=full&geometries=geojson`;
-  const res=await fetch(url); if(!res.ok) throw new Error('Routing server returned '+res.status);
-  const data=await res.json();
+  const url=`${OSRM}/route/v1/driving/${start.lon},${start.lat};${end.lon},${end.lat}?overview=full&geometries=geojson&steps=true`;
+  let res;
+  try{ res=await fetch(url); }
+  catch{ throw new Error('Could not reach the routing server. Check your connection and try again.'); }
+  if(!res.ok) throw new Error('Routing server returned '+res.status);
+  let data;
+  try{ data=await res.json(); }
+  catch{ throw new Error('The routing server sent a reply that could not be read.'); }
   if(data.code!=='Ok'||!data.routes?.[0]) throw new Error(data.message||'No driving route found');
-  const r=data.routes[0]; return {duration:r.duration, distance:r.distance, geometry:r.geometry};
+  const r=data.routes[0];
+  const steps=[];
+  for(const leg of r.legs||[]) for(const step of leg.steps||[]) steps.push(step);
+  return {duration:r.duration, distance:r.distance, geometry:r.geometry, steps};
+}
+function directionWord(mod){
+  const words={
+    left:'left', right:'right', straight:'straight',
+    'slight left':'slightly left', 'slight right':'slightly right',
+    'sharp left':'sharply left', 'sharp right':'sharply right',
+    uturn:'around'
+  };
+  return words[mod]||String(mod||'').replace(/-/g,' ');
+}
+function stepPhrase(step){
+  const m=step.maneuver||{};
+  const type=String(m.type||'continue').replace(/-/g,' ');
+  const mod=directionWord(m.modifier);
+  const name=(step.name||'').trim();
+  const road=name||'the road';
+  if(type==='depart') return 'Head '+(mod||'out')+(name?' on '+name:'');
+  if(type==='arrive') return name ? 'You have arrived near '+name : 'You have arrived';
+  if(type==='roundabout'||type==='rotary'||type==='exit roundabout'||type==='roundabout turn'){
+    const exit=m.exit?('take exit '+m.exit+' '):'';
+    return 'At the roundabout, '+exit+(name?'onto '+name:'and continue');
+  }
+  if(type==='turn'||type==='end of road') return 'Turn '+(mod||'ahead')+' onto '+road;
+  if(type==='merge') return 'Merge'+(mod?' '+mod:'')+' onto '+road;
+  if(type==='on ramp') return 'Take the ramp'+(mod?' '+mod:'')+' onto '+road;
+  if(type==='off ramp') return 'Take the exit'+(mod?' '+mod:'')+' onto '+road;
+  if(type==='fork') return 'Keep '+(mod||'straight')+' onto '+road;
+  if(type==='continue'||type==='new name') return 'Continue on '+road;
+  return 'Continue'+(mod?' '+mod:'')+' on '+road;
+}
+function renderSteps(steps, summaryText, googleHref){
+  const panel=document.getElementById('steps-panel');
+  const list=document.getElementById('steps-list');
+  const err=document.getElementById('steps-error');
+  const sum=document.getElementById('steps-summary');
+  const g=document.getElementById('steps-google');
+  err.textContent='';
+  sum.textContent=summaryText||'';
+  panel.classList.add('show');
+  if(googleHref){ g.href=googleHref; g.hidden=false; }
+  else { g.hidden=true; g.removeAttribute('href'); }
+  if(!steps||!steps.length){
+    list.innerHTML='<li><span class="step-text">No turn-by-turn steps came back for this route.</span></li>';
+    return;
+  }
+  list.innerHTML=steps.map(step=>`<li><span class="step-text">${escapeHtml(stepPhrase(step))}</span><span class="step-dist">${escapeHtml(formatKm(step.distance))} · ${escapeHtml(formatMin(step.duration))}</span></li>`).join('');
+}
+function clearStepsPanel(){
+  const panel=document.getElementById('steps-panel');
+  panel.classList.remove('show');
+  document.getElementById('steps-list').innerHTML='';
+  document.getElementById('steps-summary').textContent='';
+  document.getElementById('steps-error').textContent='';
+  const g=document.getElementById('steps-google');
+  g.hidden=true; g.removeAttribute('href');
+}
+function showRouteError(msg){
+  const panel=document.getElementById('steps-panel');
+  panel.classList.add('show');
+  document.getElementById('steps-summary').textContent='';
+  document.getElementById('steps-list').innerHTML='';
+  document.getElementById('steps-error').textContent=msg;
+  document.getElementById('steps-google').hidden=true;
 }
 async function fetchOsrmTable(coords, sources, destinations){
   const path=coords.map(c=>`${c.lon},${c.lat}`).join(';');
@@ -912,6 +1061,7 @@ function clearRoute(){
   document.getElementById('detour-error').style.display='none';
   document.getElementById('detour-status').textContent='';
   document.getElementById('range-status').textContent='';
+  clearStepsPanel();
   updateCounts();
 }
 function updateRangeMarker(){
@@ -926,12 +1076,14 @@ function updateRangeMarker(){
     radius:10, color:'#111', weight:2, fillColor:'#e85d5d', fillOpacity:0.95
   }).addTo(map).bindPopup(`Range runs out here (~${emptyKm.toFixed(0)} km) at ${consumption()} kWh/100 km`);
 }
-function showRouteOnMap(start,end,geometry,directSec,directM){
+function showRouteOnMap(start,end,geometry,directSec,directM,steps){
   if(routeLayer) map.removeLayer(routeLayer);
   if(startMarker) map.removeLayer(startMarker);
   if(endMarker) map.removeLayer(endMarker);
   const latlngs=geometry.coordinates.map(([lng,lat])=>[lat,lng]);
-  routeLayer=L.polyline(latlngs,{color:'#5eb1ff', weight:7, opacity:0.85}).addTo(map);
+  const casing=L.polyline(latlngs,{color:'#111', weight:16, opacity:0.95, lineCap:'round', lineJoin:'round'});
+  const line=L.polyline(latlngs,{color:'#ffe14a', weight:9, opacity:1, lineCap:'round', lineJoin:'round'});
+  routeLayer=L.featureGroup([casing,line]).addTo(map);
   startMarker=L.circleMarker([start.lat,start.lon],{radius:9,color:'#fff',weight:2,fillColor:'#ff5a36',fillOpacity:0.95}).addTo(map).bindPopup('Start: '+escapeHtml(start.label||'Start'));
   endMarker=L.circleMarker([end.lat,end.lon],{radius:9,color:'#fff',weight:2,fillColor:'#7CFC00',fillOpacity:0.95}).addTo(map).bindPopup('Destination: '+escapeHtml(end.label||'Destination'));
   map.fitBounds(routeLayer.getBounds().pad(0.12));
@@ -944,8 +1096,10 @@ function showRouteOnMap(start,end,geometry,directSec,directM){
   sum.classList.add('show');
   document.getElementById('btn-clear-route').disabled=false;
   const g=document.getElementById('btn-google-dir');
-  g.href=`https://www.google.com/maps/dir/?api=1&origin=${start.lat},${start.lon}&destination=${end.lat},${end.lon}`;
+  const googleHref=`https://www.google.com/maps/dir/?api=1&origin=${start.lat},${start.lon}&destination=${end.lat},${end.lon}`;
+  g.href=googleHref;
   g.style.display='inline-flex';
+  renderSteps(steps||[], `${formatKm(directM)} · ${formatMin(directSec)}`, googleHref);
   updateRangeMarker();
 }
 function stationsNearRoute(geometry, corridorKm){
@@ -1043,33 +1197,62 @@ async function routeFromTo(start,end){
   document.getElementById('btn-route').disabled=true;
   try{
     const r=await fetchOsrmRoute(start,end);
-    routeState={start,end,directSec:r.duration,directM:r.distance,geometry:r.geometry,detours:[],corridorKm:Number(document.getElementById('corridor-km').value)||5};
-    showRouteOnMap(start,end,r.geometry,r.duration,r.distance);
+    routeState={start,end,directSec:r.duration,directM:r.distance,geometry:r.geometry,steps:r.steps||[],detours:[],corridorKm:Number(document.getElementById('corridor-km').value)||5};
+    showRouteOnMap(start,end,r.geometry,r.duration,r.distance,r.steps);
     document.getElementById('status').textContent=`Route ready · ${formatKm(r.distance)} · ${formatMin(r.duration)}`;
     await analyzeRouteChargers();
   }catch(e){
-    openModal('Routing',`<p>${escapeHtml(e.message||String(e))}</p>`);
+    const msg=e.message||String(e);
+    showRouteError(msg);
+    openModal('Routing',`<p>${escapeHtml(msg)}</p>`);
     document.getElementById('status').textContent='Routing failed';
   }finally{ document.getElementById('btn-route').disabled=false; }
 }
 function askForStart(dest){
   pendingDest=dest;
-  openModal('Starting point needed',`
-    <p>Location permission is off or unavailable, so the route needs a starting point.</p>
-    <p><strong>Option 1:</strong> type a start address</p>
-    <input type="text" id="start-input" placeholder="e.g. Disraeli, QC">
-    <button type="button" class="primary" id="do-start-address">Use this start address</button>
-    <p style="margin-top:0.85rem"><strong>Option 2:</strong> tap the map to drop a start pin</p>
-    <button type="button" id="do-start-tap">I will tap the map</button>
+  openModal('Location needed',`
+    <p>Your location could not be used. Permission may be denied, or this device has no position.</p>
+    <p>Tap the map to drop a starting pin.</p>
+    <button type="button" class="primary" id="do-start-tap">I will tap the map</button>
+    <p style="margin-top:0.85rem">Or type a start address. Leaving this empty does not start a route.</p>
+    <input type="text" id="start-input" placeholder="Start address">
+    <button type="button" id="do-start-address">Use this start address</button>
     <p class="popup-meta" id="start-msg"></p>`);
   document.getElementById('do-start-address').onclick=async()=>{
     const q=document.getElementById('start-input').value.trim(); const msg=document.getElementById('start-msg');
-    if(!q){ msg.textContent='Enter a start address first.'; return; }
+    if(!q){ msg.textContent='Type a start address, or tap the map. An empty address is not used.'; return; }
     msg.textContent='Looking up start…';
     try{ const start=await geocode(q); closeModal(); await routeFromTo(start,dest); }
     catch(e){ msg.textContent=e.message||String(e); }
   };
   document.getElementById('do-start-tap').onclick=()=>{ closeModal(); pickMode='start'; setPickBanner('Tap the map to set your starting point'); };
+}
+async function startPopupDirections(btn){
+  const end={
+    lat:Number(btn.getAttribute('data-route-lat')),
+    lon:Number(btn.getAttribute('data-route-lon')),
+    label:btn.getAttribute('data-route-name')||'Charger'
+  };
+  if(!isFinite(end.lat)||!isFinite(end.lon)){
+    openModal('Directions','<p>This charger has no location, so a route cannot be drawn.</p>');
+    return;
+  }
+  document.getElementById('status').textContent='Finding your location…';
+  try{
+    const start=here||await getCurrentPosition();
+    if(!youMarker) placeYouMarker(start.lat, start.lon);
+    if(map) map.closePopup();
+    await routeFromTo(start,end);
+  }catch(err){
+    const code=err&&err.code;
+    const denied=code===1||code===2||code===3||/denied|unavailable|timeout|permission/i.test(String(err&&err.message||err));
+    document.getElementById('status').textContent=denied?'Location needed':'Routing failed';
+    if(denied) askForStart(end);
+    else{
+      showRouteError(err.message||String(err));
+      openModal('Directions',`<p>${escapeHtml(err.message||String(err))}</p>`);
+    }
+  }
 }
 async function startRouteFlow(){
   const q=document.getElementById('dest-input').value.trim();
@@ -1122,6 +1305,12 @@ document.addEventListener('click', async (e)=>{
       return;
     }
   }
+  const routeBtn=e.target.closest('[data-route-lat]');
+  if(routeBtn){
+    if(Date.now()-(document._routeTouchAt||0)<700) return;
+    startPopupDirections(routeBtn);
+    return;
+  }
   const btn=e.target.closest('[data-set-color]');
   if(!btn) return;
   if(Date.now()-(document._colorTagTouchAt||0)<700) return;
@@ -1134,6 +1323,15 @@ function applyColorTag(btn){
   saveColors(); recolourMarker(id);
 }
 document.addEventListener('touchend', (e)=>{
+  const routeBtn=e.target.closest&&e.target.closest('[data-route-lat]');
+  if(routeBtn){
+    if(document._routeBusy) return;
+    document._routeBusy=true;
+    document._routeTouchAt=Date.now();
+    setTimeout(function(){ document._routeBusy=false; }, 800);
+    startPopupDirections(routeBtn);
+    return;
+  }
   const btn=e.target.closest&&e.target.closest('[data-set-color]');
   if(!btn) return;
   document._colorTagTouchAt=Date.now();
@@ -1186,7 +1384,7 @@ document.getElementById('btn-settings-save').onclick=()=>{
     for(const d of routeState.detours||[]){
       d.arrivalPct=arrivalPctAtKm((d.toChargerM!=null?d.toChargerM:d.alongM)/1000);
     }
-    showRouteOnMap(routeState.start, routeState.end, routeState.geometry, routeState.directSec, routeState.directM);
+    showRouteOnMap(routeState.start, routeState.end, routeState.geometry, routeState.directSec, routeState.directM, routeState.steps);
     renderDetourList();
   }
   showCopyToast('Range settings saved');
@@ -1195,11 +1393,10 @@ document.getElementById('btn-locate').onclick=()=>{
   if(!navigator.geolocation){ openModal('Locate me','<p>Geolocation is not available in this browser.</p>'); return; }
   document.getElementById('status').textContent='Finding your location…';
   navigator.geolocation.getCurrentPosition(pos=>{
-    map.setView([pos.coords.latitude,pos.coords.longitude],11);
-    if(youMarker) map.removeLayer(youMarker);
-    youMarker=L.circleMarker([pos.coords.latitude,pos.coords.longitude],{radius:8,color:'#fff',weight:2,fillColor:'#ff5a36',fillOpacity:0.9}).addTo(map).bindPopup('You are here').openPopup();
+    placeYouMarker(pos.coords.latitude, pos.coords.longitude);
+    map.setView([pos.coords.latitude, pos.coords.longitude], 11);
     updateCounts();
-  }, err=>openModal('Locate me',`<p>Could not get location: ${escapeHtml(err.message)}</p>`), {enableHighAccuracy:true, timeout:15000});
+  }, err=>openModal('Locate me',`<p>Could not get location: ${escapeHtml(err.message)}</p>`), {enableHighAccuracy:true, timeout:8000});
 };
 
 document.getElementById('btn-export').onclick=async()=>{
@@ -1250,6 +1447,7 @@ document.getElementById('import-file').onchange=async(e)=>{
 document.getElementById('btn-route').onclick=()=>startRouteFlow();
 document.getElementById('dest-input').addEventListener('keydown',e=>{ if(e.key==='Enter') startRouteFlow(); });
 document.getElementById('btn-clear-route').onclick=()=>clearRoute();
+document.getElementById('btn-steps-clear').onclick=()=>clearRoute();
 document.getElementById('corridor-km').addEventListener('change',()=>{ if(routeState) analyzeRouteChargers(); });
 
 function replaceStations(next){
@@ -1382,7 +1580,7 @@ const __chargerMapReady=loadStations().then((data)=>{
   throw err;
 });
 
-window.__chargerMapTest = { get STATIONS(){return STATIONS;}, get META(){return META;}, get map(){return map;}, getColor, trailerInfo, settings, notes, colors, COLORS, inkForFill, relativeLuminance, contrastRatio, recolourMarker, arrivalPctAtKm, rangeFlagForPct, rangeToEmptyKm, consumption, COLOR_KEY, SETTINGS_KEY, NOTES_KEY, LISTED_GREEN_MIGRATE_KEY, get colorMigration(){return colorMigration;}, ready: __chargerMapReady };
+window.__chargerMapTest = { get STATIONS(){return STATIONS;}, get META(){return META;}, get map(){return map;}, get here(){return here;}, getColor, trailerInfo, settings, notes, colors, COLORS, inkForFill, relativeLuminance, contrastRatio, recolourMarker, arrivalPctAtKm, rangeFlagForPct, rangeToEmptyKm, consumption, COLOR_KEY, SETTINGS_KEY, NOTES_KEY, LISTED_GREEN_MIGRATE_KEY, get colorMigration(){return colorMigration;}, ready: __chargerMapReady };
 
 </script>
 </body>
