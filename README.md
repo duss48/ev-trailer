@@ -13,3 +13,5 @@ Open the site at https://duss48.github.io/ev-trailer/. The page loads the statio
 ## Colour tags and notes
 
 Colour tags and notes are stored only on your device, in this browser. They are not uploaded to this site. Use Export and Import on the page if you want a copy to keep or move to another device.
+
+A charger on the trailer-friendly list starts out green. Yellow is only a tag you set yourself. The first time this version loads, an older yellow tag on a listed trailer-friendly charger is cleared so that charger shows green again. Notes are left as they are.

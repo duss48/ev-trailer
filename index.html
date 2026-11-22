@@ -20,7 +20,7 @@
   --blue:#2f6fed; --yellow:#e6b800; --green:#1f9d55; --danger:#e85d5d; --warn:#e6b800; --ok:#1f9d55;
   --radius:12px; --font:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif; --base:18px;
 }
-*{box-sizing:border-box} html,body{height:100%;margin:0}
+*{box-sizing:border-box} html,body{min-height:100%;margin:0}
 body{font-family:var(--font);font-size:var(--base);line-height:1.45;color:var(--text);background:var(--bg);display:flex;flex-direction:column}
 button,input,select,textarea{font:inherit}
 button{cursor:pointer;border:2px solid var(--border);background:var(--panel);color:var(--text);border-radius:10px;padding:.55rem .85rem;min-height:44px}
@@ -45,9 +45,10 @@ button:disabled{opacity:.55;cursor:wait}
 #route-summary{display:none;width:100%;padding:.45rem .15rem .1rem;font-size:1.1rem;font-weight:700}
 #route-summary.show{display:block}
 #route-summary .muted{color:var(--muted);font-weight:400;font-size:.95rem}
-#main{flex:1 1 auto;min-height:240px;display:flex;flex-direction:row;position:relative;overflow:hidden}
-#map{flex:1 1 auto;min-width:0;height:100%}
-#detour-panel{display:none;width:min(440px,100%);background:var(--panel);border-left:2px solid var(--border);overflow:auto;flex-direction:column}
+#main{flex:0 0 auto;width:100%;display:flex;flex-flow:row wrap;align-items:flex-start;position:relative}
+#map-stage{position:relative;flex:0 0 auto;width:min(100%,100vh);width:min(100%,100dvh);max-width:100%}
+#map{width:100%;aspect-ratio:1/1;height:auto;background:#0c1218}
+#detour-panel{display:none;flex:1 1 280px;width:min(440px,100%);min-width:min(100%,280px);max-height:100vh;max-height:100dvh;background:var(--panel);border-left:2px solid var(--border);overflow:auto;flex-direction:column}
 #detour-panel.show{display:flex}
 #detour-panel header{position:sticky;top:0;background:var(--panel);border-bottom:2px solid var(--border);padding:.65rem .75rem;z-index:2}
 #detour-panel header h2{margin:0 0 .35rem;font-size:1.15rem}
@@ -98,21 +99,22 @@ button:disabled{opacity:.55;cursor:wait}
 #modal h2{margin:0 0 .5rem;font-size:1.25rem} #modal p{color:var(--muted);margin:.4rem 0}
 #modal input[type=text]{width:100%;background:#0f1419;color:var(--text);border:2px solid var(--border);border-radius:8px;padding:.6rem;margin:.4rem 0 .7rem}
 #modal .row{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.5rem}
-.marker-wrap{background:transparent!important;border:none!important}
-.badge{width:34px;height:34px;border-radius:50%;background:#fff;border:2px solid #111;box-shadow:0 2px 6px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
-.badge .logo{width:22px;height:22px;background-color:var(--tint,#2f6fed);-webkit-mask-position:center;mask-position:center;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-size:contain;mask-size:contain}
-.badge .mono{font-weight:700;font-size:11px;color:var(--tint,#2f6fed)}
+.leaflet-marker-icon.marker-wrap{pointer-events:auto;background:transparent!important;border:none!important}
+.leaflet-marker-icon.marker-wrap *{pointer-events:none}
+.badge{width:44px;height:44px;border-radius:50%;background:var(--fill,#2f6fed);border:2px solid #111;box-shadow:0 2px 6px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;position:relative;flex:0 0 auto}
+.badge .logo{width:26px;height:26px;background-color:var(--ink,#000);-webkit-mask-position:center;mask-position:center;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-size:contain;mask-size:contain}
+.badge .mono{font-weight:700;font-size:13px;line-height:1;color:var(--ink,#000)}
 .badge .note-dot{position:absolute;right:-2px;top:-2px;width:12px;height:12px;border-radius:50%;background:#ffd166;border:2px solid #111}
+.badge.badge-dot{background:transparent;border:none;box-shadow:none}
+.badge.badge-dot::before{content:"";width:14px;height:14px;border-radius:50%;background:var(--fill,#1f9d55);border:2px solid #111;box-shadow:0 1px 3px rgba(0,0,0,.5)}
+.badge.badge-dot .note-dot{right:12px;top:12px;width:10px;height:10px}
+.popup-actions button,.leaflet-popup-content button{min-height:44px;touch-action:manipulation}
 .toast-copy{position:fixed;left:50%;bottom:5.5rem;transform:translateX(-50%);background:#243044;color:var(--text);border:2px solid var(--border);padding:.55rem .9rem;border-radius:10px;z-index:3000;font-weight:700;display:none}
 .toast-copy.show{display:block}
-@media(max-width:820px){#main{flex-direction:column}#detour-panel{width:100%;max-height:42%;border-left:none;border-top:2px solid var(--border)}#map{min-height:45vh}}
-.marker-cluster-small,.marker-cluster-medium,.marker-cluster-large{background-clip:padding-box}
-.marker-cluster-small{background-color:rgba(47,111,237,.45)}
-.marker-cluster-small div{background-color:#2f6fed;color:#fff;font-weight:700}
-.marker-cluster-medium{background-color:rgba(230,184,0,.45)}
-.marker-cluster-medium div{background-color:#e6b800;color:#111;font-weight:700}
-.marker-cluster-large{background-color:rgba(31,157,85,.45)}
-.marker-cluster-large div{background-color:#1f9d55;color:#fff;font-weight:700}
+@media(max-width:820px){#main{flex-direction:column}#detour-panel{width:100%;max-height:70dvh;border-left:none;border-top:2px solid var(--border)}}
+.marker-cluster-small,.marker-cluster-medium,.marker-cluster-large{background-clip:padding-box;background-color:rgba(90,104,122,.45)}
+.marker-cluster-small div,.marker-cluster-medium div,.marker-cluster-large div{background-color:#3c4754;color:#fff;font-weight:700;width:34px;height:34px;margin-left:5px;margin-top:5px}
+.marker-cluster span{line-height:34px}
 
 </style>
 </head>
@@ -149,8 +151,10 @@ button:disabled{opacity:.55;cursor:wait}
   <div id="route-summary"></div>
 </div>
 <div id="main">
-  <div id="pick-banner"></div>
-  <div id="map" role="application" aria-label="Charger map"></div>
+  <div id="map-stage">
+    <div id="pick-banner"></div>
+    <div id="map" role="application" aria-label="Charger map"></div>
+  </div>
   <aside id="detour-panel" aria-label="Chargers along route">
     <header>
       <h2>Chargers on the way</h2>
@@ -210,7 +214,11 @@ const DEFAULT_SETTINGS = {
   reservePct: 10
 };
 
-let map, markersLayer, markerById = new Map(), stationById = new Map();
+let map, markersLayer, soloLayer, markerById = new Map(), stationById = new Map();
+let colorMigration = {applied:false, cleared:0, tags:0, ids:[]};
+const MARKER_PX = 44;
+const LOGO_ZOOM = 12;
+const LISTED_GREEN_MIGRATE_KEY = 'chargerMap.listedGreenMigration.v1';
 let colors = loadJSON(COLOR_KEY, {});
 let notes = loadJSON(NOTES_KEY, {});
 let settings = Object.assign({}, DEFAULT_SETTINGS, loadJSON(SETTINGS_KEY, {}));
@@ -382,20 +390,96 @@ function monogramFor(network){
   if(parts.length===1) return parts[0].slice(0,3).toUpperCase();
   return (parts[0][0]+(parts[1]?.[0]||'')).toUpperCase();
 }
+function srgbChannel(value){
+  const x=value/255;
+  return x<=0.04045 ? x/12.92 : Math.pow((x+0.055)/1.055, 2.4);
+}
+function relativeLuminance(hex){
+  const raw=String(hex||'').replace('#','').trim();
+  const full=raw.length===3 ? raw.split('').map(ch=>ch+ch).join('') : raw;
+  const r=parseInt(full.slice(0,2),16);
+  const g=parseInt(full.slice(2,4),16);
+  const b=parseInt(full.slice(4,6),16);
+  return 0.2126*srgbChannel(r)+0.7152*srgbChannel(g)+0.0722*srgbChannel(b);
+}
+function contrastRatio(a,b){
+  const hi=Math.max(a,b), lo=Math.min(a,b);
+  return (hi+0.05)/(lo+0.05);
+}
+function inkForFill(hex){
+  const L=relativeLuminance(hex);
+  const onWhite=contrastRatio(L, 1);
+  const onBlack=contrastRatio(L, 0);
+  return onWhite>onBlack ? '#ffffff' : '#000000';
+}
 function logoHtml(network, colorName, withNote){
-  const tint=COLORS[colorName]||COLORS.blue;
+  const fill=COLORS[colorName]||COLORS.blue;
+  const ink=inkForFill(fill);
   const key=networkKey(network);
   const mask=key && LOGO_MASKS[key];
   const note=withNote?'<span class="note-dot" title="Has notes"></span>':'';
-  if(mask) return `<div class="badge">${note}<div class="logo" style="--tint:${tint};background-color:${tint};-webkit-mask-image:url('${mask}');mask-image:url('${mask}');"></div></div>`;
-  return `<div class="badge">${note}<span class="mono" style="--tint:${tint};color:${tint}">${escapeHtml(monogramFor(network))}</span></div>`;
+  if(mask) return `<div class="badge" style="--fill:${fill};--ink:${ink}">${note}<div class="logo" style="background-color:${ink};-webkit-mask-image:url('${mask}');mask-image:url('${mask}');"></div></div>`;
+  return `<div class="badge" style="--fill:${fill};--ink:${ink}">${note}<span class="mono" style="color:${ink}">${escapeHtml(monogramFor(network))}</span></div>`;
 }
-function pinIcon(network, colorName, withNote){
-  const cacheKey=(networkKey(network)||monogramFor(network))+'|'+colorName+'|'+(withNote?1:0);
+function dotHtml(colorName, withNote){
+  const fill=COLORS[colorName]||COLORS.green;
+  const note=withNote?'<span class="note-dot" title="Has notes"></span>':'';
+  return `<div class="badge badge-dot" style="--fill:${fill}">${note}</div>`;
+}
+function markerIsDot(colorName, zoom){
+  return (colorName==='green'||colorName==='yellow') && zoom<LOGO_ZOOM;
+}
+function pinIcon(network, colorName, withNote, zoom){
+  const z=zoom==null ? (map&&map.getZoom?map.getZoom():LOGO_ZOOM) : zoom;
+  const dot=markerIsDot(colorName, z);
+  const cacheKey=(networkKey(network)||monogramFor(network))+'|'+colorName+'|'+(withNote?1:0)+'|'+(dot?'dot':'logo');
   if(iconCache.has(cacheKey)) return iconCache.get(cacheKey);
-  const icon=L.divIcon({className:'marker-wrap', html:logoHtml(network,colorName,withNote), iconSize:[34,34], iconAnchor:[17,17], popupAnchor:[0,-16]});
+  const html=dot ? dotHtml(colorName, withNote) : logoHtml(network, colorName, withNote);
+  const icon=L.divIcon({className:'marker-wrap', html, iconSize:[MARKER_PX,MARKER_PX], iconAnchor:[MARKER_PX/2,MARKER_PX/2], popupAnchor:[0,-MARKER_PX/2]});
   iconCache.set(cacheKey, icon);
   return icon;
+}
+function armMarkerTap(marker){
+  const icon=marker&&marker.getElement&&marker.getElement();
+  if(!icon||icon._evTrailerTap) return;
+  icon._evTrailerTap=true;
+  const isCluster=icon.classList.contains('marker-cluster');
+  let start=null;
+  L.DomEvent.on(icon, 'touchstart', function(e){
+    L.DomEvent.stopPropagation(e);
+    const t=e.touches&&e.touches[0];
+    start=t?{x:t.clientX,y:t.clientY}:null;
+  });
+  L.DomEvent.on(icon, 'mousedown', L.DomEvent.stopPropagation);
+  if(isCluster) return;
+  L.DomEvent.on(icon, 'click', function(e){
+    L.DomEvent.stopPropagation(e);
+    L.DomEvent.preventDefault(e);
+    if(icon._suppressClick) return;
+    if(!(marker.getPopup&&marker.getPopup())) return;
+    if(marker.isPopupOpen&&marker.isPopupOpen()) marker.closePopup();
+    else marker.openPopup();
+  });
+  L.DomEvent.on(icon, 'touchend', function(e){
+    const t=e.changedTouches&&e.changedTouches[0];
+    if(start&&t && Math.abs(t.clientX-start.x)+Math.abs(t.clientY-start.y)>28) return;
+    if(!(marker.getPopup&&marker.getPopup())) return;
+    // The synthetic click that follows a tap would reach the map and close the popup.
+    L.DomEvent.preventDefault(e);
+    L.DomEvent.stopPropagation(e);
+    icon._suppressClick=true;
+    setTimeout(function(){ icon._suppressClick=false; }, 700);
+    if(marker.isPopupOpen&&marker.isPopupOpen()) marker.closePopup();
+    else marker.openPopup();
+  });
+}
+function paintMarker(marker, station, colorName){
+  marker.setIcon(pinIcon(station.network, colorName, hasNote(station.id)));
+  armMarkerTap(marker);
+}
+function popupOptions(){
+  const h=map&&map.getSize ? Math.max(200, Math.round(map.getSize().y*0.78)) : 320;
+  return {maxWidth:320, maxHeight:h, autoPan:true, autoPanPadding:[10,10]};
 }
 
 function haversineM(aLat,aLon,bLat,bLon){
@@ -463,13 +547,41 @@ function migrateColorsAfterDedupe(list){
   let changed=false;
   for(const s of list){
     const ids=s._mergedIds||[s.id];
+    if(isDataTrailer(s)){
+      for(const id of ids){
+        if(id!==s.id && colors[id]==='yellow'){ delete colors[id]; changed=true; }
+      }
+    }
     let chosen=null;
-    for(const id of ids){ const c=colors[id]; if(c==='green'||c==='yellow'){ chosen=c; break; } }
+    for(const id of ids){
+      const c=colors[id];
+      if(c!=='green'&&c!=='yellow') continue;
+      if(isDataTrailer(s) && c==='yellow' && id!==s.id) continue;
+      chosen=c;
+      break;
+    }
     if(!chosen) continue;
     if(colors[s.id]!==chosen){ colors[s.id]=chosen; changed=true; }
     for(const id of ids){ if(id!==s.id && colors[id]){ delete colors[id]; changed=true; } }
   }
   if(changed) saveColors();
+}
+function migrateListedGreenOverOldYellow(list){
+  if(localStorage.getItem(LISTED_GREEN_MIGRATE_KEY)==='1') return {applied:false, cleared:0, tags:0, ids:[]};
+  const ids=[];
+  let cleared=0;
+  for(const s of list){
+    if(!isDataTrailer(s)) continue;
+    const keys=s._mergedIds||[s.id];
+    if(!keys.some(id=>colors[id]==='yellow')) continue;
+    cleared++;
+    for(const id of keys){
+      if(colors[id]==='yellow'){ delete colors[id]; ids.push(id); }
+    }
+  }
+  if(ids.length) saveColors();
+  localStorage.setItem(LISTED_GREEN_MIGRATE_KEY,'1');
+  return {applied:true, cleared, tags:ids.length, ids};
 }
 
 function popupHtml(s){
@@ -532,7 +644,7 @@ function visibleCountry(code){
 function updateCounts(){
   const tallies={blue:0,yellow:0,green:0};
   for(const s of STATIONS) tallies[getColor(s.id)]++;
-  const shown=[...markerById.values()].filter(m=>markersLayer.hasLayer(m)).length;
+  const shown=[...markerById.values()].filter(m=>(markersLayer&&markersLayer.hasLayer(m))||(soloLayer&&soloLayer.hasLayer(m))).length;
   document.getElementById('counts').textContent=` · Showing ${shown} of ${STATIONS.length} · Blue ${tallies.blue} · Yellow ${tallies.yellow} · Green ${tallies.green}`;
   if(!routeState){
     const ca=STATIONS.filter(s=>s.country==='CA').length, us=STATIONS.filter(s=>s.country==='US').length;
@@ -540,32 +652,61 @@ function updateCounts(){
     document.getElementById('status').textContent=`${STATIONS.length} stations · CA ${ca} · US ${us} · ${listed} listed trailer-friendly · snapshot ${META.fetched||''}`;
   }
 }
+function markerLayerFor(col){ return (col==='green'||col==='yellow') ? soloLayer : markersLayer; }
+function detachMarker(m){
+  if(markersLayer&&markersLayer.hasLayer(m)) markersLayer.removeLayer(m);
+  if(soloLayer&&soloLayer.hasLayer(m)) soloLayer.removeLayer(m);
+}
+function attachMarker(m, col){
+  detachMarker(m);
+  markerLayerFor(col).addLayer(m);
+}
 function applyFilters(){
   for(const s of STATIONS){
     const m=markerById.get(s.id); if(!m) continue;
     const col=getColor(s.id), show=visibleColor(col)&&visibleCountry(s.country);
-    if(show){ if(!markersLayer.hasLayer(m)) m.addTo(markersLayer); }
-    else if(markersLayer.hasLayer(m)) markersLayer.removeLayer(m);
+    if(!show){ detachMarker(m); continue; }
+    const want=markerLayerFor(col);
+    if(want.hasLayer(m)) continue;
+    attachMarker(m, col);
   }
   updateCounts(); renderDetourList();
 }
 function recolourMarker(id){
-  const m=markerById.get(id), s=STATIONS.find(x=>x.id===id);
+  const m=markerById.get(id), s=getStation(id);
   if(!m||!s) return;
-  m.setIcon(pinIcon(s.network, getColor(id), hasNote(id)));
+  const open=m.isPopupOpen&&m.isPopupOpen();
+  const col=getColor(id);
+  paintMarker(m, s, col);
   m.setPopupContent(popupHtml(s));
   applyFilters();
+  if(open && m.openPopup) m.openPopup();
 }
-function buildMarkers(){
-  markersLayer.clearLayers(); markerById.clear(); iconCache.clear();
+function refreshSoloIcons(){
+  if(!map) return;
+  const dot=map.getZoom()<LOGO_ZOOM;
+  if(refreshSoloIcons._dot===dot) return;
+  refreshSoloIcons._dot=dot;
   for(const s of STATIONS){
     const col=getColor(s.id);
-    const m=L.marker([s.lat,s.lon],{icon:pinIcon(s.network,col,hasNote(s.id)), title:s.name});
-    m.bindPopup(()=>popupHtml(s),{maxWidth:340, autoPanPadding:[40,40]});
-    m.on('popupopen', ()=>fillPopupPhoto(s.id));
-    markerById.set(s.id,m);
-    if(visibleColor(col)&&visibleCountry(s.country)) m.addTo(markersLayer);
+    if(col!=='green'&&col!=='yellow') continue;
+    const m=markerById.get(s.id);
+    if(m) paintMarker(m, s, col);
   }
+}
+function buildMarkers(){
+  markersLayer.clearLayers(); soloLayer.clearLayers(); markerById.clear(); iconCache.clear();
+  const z=map.getZoom();
+  for(const s of STATIONS){
+    const col=getColor(s.id);
+    const m=L.marker([s.lat,s.lon],{icon:pinIcon(s.network,col,hasNote(s.id),z), title:s.name, keyboard:true});
+    m.bindPopup(()=>popupHtml(s), popupOptions());
+    m.on('popupopen', ()=>fillPopupPhoto(s.id));
+    m.on('add', ()=>armMarkerTap(m));
+    markerById.set(s.id,m);
+    if(visibleColor(col)&&visibleCountry(s.country)) attachMarker(m, col);
+  }
+  refreshSoloIcons._dot = map.getZoom()<LOGO_ZOOM;
   updateCounts();
 }
 function openModal(title, bodyHtml){
@@ -611,16 +752,29 @@ function readSettingsForm(){
 function initMap(){
   map=L.map('map',{zoomControl:true}).setView([48,-96],4);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19, attribution:'&copy; OpenStreetMap · Open Charge Map · OSRM'}).addTo(map);
-  markersLayer=L.markerClusterGroup({showCoverageOnHover:false, maxClusterRadius:60, spiderfyOnMaxZoom:true, disableClusteringAtZoom:12, chunkedLoading:true});
+  markersLayer=L.markerClusterGroup({
+    showCoverageOnHover:false, maxClusterRadius:60, spiderfyOnMaxZoom:true, disableClusteringAtZoom:12, chunkedLoading:true,
+    iconCreateFunction(cluster){
+      const count=cluster.getChildCount();
+      const size=count<10?'small':count<100?'medium':'large';
+      return L.divIcon({html:'<div><span>'+count+'</span></div>', className:'marker-cluster marker-cluster-'+size, iconSize:[44,44]});
+    }
+  });
+  soloLayer=L.layerGroup();
   map.addLayer(markersLayer);
+  map.addLayer(soloLayer);
+  map.on('layeradd', (e)=>{ if(e.layer&&e.layer.getElement) armMarkerTap(e.layer); });
+  map.on('zoomend', refreshSoloIcons);
   buildMarkers();
-  if(STATIONS.length) map.fitBounds(L.latLngBounds(STATIONS.map(s=>[s.lat,s.lon])).pad(0.05));
+  if(STATIONS.length) map.fitBounds(L.latLngBounds(STATIONS.map(s=>[s.lat,s.lon])).pad(0.05), {animate:false});
   map.on('click',(e)=>{
     if(pickMode!=='start') return;
     pickMode=null; setPickBanner('');
     const start={lat:e.latlng.lat, lon:e.latlng.lng, label:'Map pin'};
     if(pendingDest) routeFromTo(start, pendingDest);
   });
+  window.addEventListener('resize', ()=>{ if(map) map.invalidateSize(); });
+  requestAnimationFrame(()=>{ if(map) map.invalidateSize(); });
 }
 
 function toRad(d){ return d*Math.PI/180; }
@@ -797,7 +951,7 @@ function renderDetourList(){
     const addMin=Math.round(d.addedSec/60);
     const note=noteFirstLine(d.station.id);
     return `<li data-station-id="${escapeHtml(d.station.id)}">
-      <div class="row1"><span class="dot ${col}"></span><span>${escapeHtml(d.station.name)}</span><span class="added">+${addMin} min</span></div>
+      <div class="row1">${logoHtml(d.station.network, col, hasNote(d.station.id))}<span>${escapeHtml(d.station.name)}</span><span class="added">+${addMin} min</span></div>
       <div class="row2">${escapeHtml(d.station.kw)} kW · ${formatKm(d.alongM)} into trip · ${escapeHtml(d.station.network)}</div>
       <div class="range-flag ${rf.cls}">${escapeHtml(rf.short)}</div>
       <div class="trailer ${tr.cls}">${escapeHtml(tr.text)}</div>
@@ -913,11 +1067,21 @@ document.addEventListener('click', async (e)=>{
   }
   const btn=e.target.closest('[data-set-color]');
   if(!btn) return;
+  if(Date.now()-(document._colorTagTouchAt||0)<700) return;
+  applyColorTag(btn);
+});
+function applyColorTag(btn){
   const id=btn.getAttribute('data-id'); const col=btn.getAttribute('data-set-color');
   if(!id||!COLORS[col]) return;
   colors[id]=col;
   saveColors(); recolourMarker(id);
-});
+}
+document.addEventListener('touchend', (e)=>{
+  const btn=e.target.closest&&e.target.closest('[data-set-color]');
+  if(!btn) return;
+  document._colorTagTouchAt=Date.now();
+  applyColorTag(btn);
+}, {passive:true});
 
 document.addEventListener('change', async (e)=>{
   const photoInput=e.target.closest('input[data-photo-id]');
@@ -1146,7 +1310,11 @@ async function loadStations(){
 document.getElementById('status').textContent='Loading stations…';
 const __chargerMapReady=loadStations().then((data)=>{
   migrateColorsAfterDedupe(STATIONS);
+  colorMigration=migrateListedGreenOverOldYellow(STATIONS);
   initMap();
+  if(colorMigration.applied && colorMigration.cleared){
+    openModal('Colour tags updated', `<p>${colorMigration.cleared} saved yellow tag${colorMigration.cleared===1?'':'s'} on listed trailer-friendly chargers ${colorMigration.cleared===1?'was':'were'} cleared, so those chargers are green again. Notes were not changed. You can still tag a charger yellow yourself.</p>`);
+  }
   const got=STATIONS.length;
   const expected=(data.stats&&data.stats.after)||got;
   if(got!==expected) console.warn('Station count '+got+' !== stats.after '+expected);
@@ -1157,7 +1325,7 @@ const __chargerMapReady=loadStations().then((data)=>{
   throw err;
 });
 
-window.__chargerMapTest = { get STATIONS(){return STATIONS;}, get META(){return META;}, getColor, trailerInfo, settings, notes, colors, arrivalPctAtKm, rangeFlagForPct, rangeToEmptyKm, consumption, COLOR_KEY, SETTINGS_KEY, NOTES_KEY, ready: __chargerMapReady };
+window.__chargerMapTest = { get STATIONS(){return STATIONS;}, get META(){return META;}, get map(){return map;}, getColor, trailerInfo, settings, notes, colors, COLORS, inkForFill, relativeLuminance, contrastRatio, recolourMarker, arrivalPctAtKm, rangeFlagForPct, rangeToEmptyKm, consumption, COLOR_KEY, SETTINGS_KEY, NOTES_KEY, LISTED_GREEN_MIGRATE_KEY, get colorMigration(){return colorMigration;}, ready: __chargerMapReady };
 
 </script>
 </body>
