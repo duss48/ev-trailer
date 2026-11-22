@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="EV Trailer">
+<title>EV Trailer</title>
+<link rel="icon" href="ev-trailer-logo.png" type="image/png">
+<link rel="apple-touch-icon" href="ev-trailer-logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" integrity="sha256-YU3qCpj/P06tdPBJGPax0bm6Q1wltfwjsho5TR4+TYc=" crossorigin="">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" integrity="sha256-YSWCMtmNZNwqex4CEw1nQhvFub2lmU7vcCKP+XVwwXA=" crossorigin="">
+<style>
+:root {
+  --bg:#0f1419; --panel:#1a2332; --text:#f4f7fb; --muted:#b7c2d0; --border:#3a4a5f;
+  --blue:#2f6fed; --yellow:#e6b800; --green:#1f9d55; --danger:#e85d5d; --warn:#e6b800; --ok:#1f9d55;
+  --radius:12px; --font:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif; --base:18px;
+}
+*{box-sizing:border-box} html,body{height:100%;margin:0}
+body{font-family:var(--font);font-size:var(--base);line-height:1.45;color:var(--text);background:var(--bg);display:flex;flex-direction:column}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer;border:2px solid var(--border);background:var(--panel);color:var(--text);border-radius:10px;padding:.55rem .85rem;min-height:44px}
+button:active{transform:scale(.98)}
+button.primary{background:var(--blue);border-color:#1e4fbf;color:#fff;font-weight:700}
+button.color-blue{background:var(--blue);border-color:#1e4fbf;color:#fff}
+button.color-yellow{background:var(--yellow);border-color:#b38a00;color:#111}
+button.color-green{background:var(--green);border-color:#147a3f;color:#fff}
+button:disabled{opacity:.55;cursor:wait}
+#topbar,#searchbar,#settings{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;padding:.55rem .75rem;border-bottom:2px solid var(--border);z-index:1000}
+#topbar{background:var(--panel)} #searchbar{background:#121821;z-index:999}
+#settings{background:#0f1419;display:none;align-items:flex-end}
+#settings.open{display:flex}
+#topbar h1{font-size:1.15rem;margin:0 .5rem 0 0;font-weight:700}
+#topbar .grow{flex:1 1 auto}
+.field{display:flex;flex-direction:column;gap:.2rem;min-width:110px}
+.field label{font-size:.9rem;color:var(--muted);font-weight:700}
+.field input[type=number],.field input[type=text],#searchbar input[type=text],#searchbar select{
+  min-height:44px;background:#0f1419;color:var(--text);border:2px solid var(--border);border-radius:10px;padding:.45rem .65rem;width:100%
+}
+.toggle{display:flex;align-items:center;gap:.45rem;min-height:44px;font-weight:700}
+#route-summary{display:none;width:100%;padding:.45rem .15rem .1rem;font-size:1.1rem;font-weight:700}
+#route-summary.show{display:block}
+#route-summary .muted{color:var(--muted);font-weight:400;font-size:.95rem}
+#main{flex:1 1 auto;min-height:240px;display:flex;flex-direction:row;position:relative;overflow:hidden}
+#map{flex:1 1 auto;min-width:0;height:100%}
+#detour-panel{display:none;width:min(440px,100%);background:var(--panel);border-left:2px solid var(--border);overflow:auto;flex-direction:column}
+#detour-panel.show{display:flex}
+#detour-panel header{position:sticky;top:0;background:var(--panel);border-bottom:2px solid var(--border);padding:.65rem .75rem;z-index:2}
+#detour-panel header h2{margin:0 0 .35rem;font-size:1.15rem}
+#detour-filters{display:flex;flex-wrap:wrap;gap:.4rem;margin:.35rem 0}
+#detour-list{list-style:none;margin:0;padding:.4rem .55rem 1rem}
+#detour-list li{border:2px solid var(--border);border-radius:12px;padding:.65rem .75rem;margin:.45rem 0;background:#121821;cursor:pointer}
+#detour-list .row1{display:flex;align-items:center;gap:.5rem;font-weight:700;font-size:1.05rem}
+#detour-list .row2{color:var(--muted);margin-top:.25rem}
+#detour-list .added{color:#ffe08a;font-weight:700;font-size:1.1rem;white-space:nowrap;margin-left:auto}
+#detour-list .trailer{font-weight:700;margin-top:.3rem}
+#detour-list .trailer.yes{color:#7dffa8} #detour-list .trailer.maybe{color:#ffe08a} #detour-list .trailer.no{color:var(--muted)}
+#detour-list .range-flag{display:inline-block;margin-top:.35rem;padding:.25rem .55rem;border-radius:999px;font-weight:700;border:2px solid var(--border)}
+#detour-list .range-flag.ok{background:#143d28;color:#7dffa8;border-color:#1f9d55}
+#detour-list .range-flag.tight{background:#3d3410;color:#ffe08a;border-color:#e6b800}
+#detour-list .range-flag.oor{background:#3d1515;color:#ffb4b4;border-color:#e85d5d}
+#detour-list .note-line{margin-top:.3rem;color:#cde4ff;font-weight:700}
+#detour-loading,#detour-error{padding:.75rem;color:var(--muted)} #detour-error{color:#ffb4b4}
+#pick-banner{display:none;position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:1100;background:#243044;border:2px solid var(--border);padding:.55rem .85rem;border-radius:12px;font-weight:700;max-width:92%;text-align:center}
+#pick-banner.show{display:block}
+#legend{display:flex;flex-wrap:wrap;gap:.65rem;align-items:center;padding:.55rem .75rem;background:var(--panel);border-top:2px solid var(--border);font-size:.95rem}
+.swatch{display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .55rem;border-radius:999px;border:2px solid var(--border);background:#121821;user-select:none}
+.swatch input{width:1.15rem;height:1.15rem}
+.dot{width:14px;height:14px;border-radius:50%;display:inline-block;border:2px solid #fff;flex:0 0 auto}
+.dot.blue{background:var(--blue)} .dot.yellow{background:var(--yellow)} .dot.green{background:var(--green)}
+#status{color:var(--muted);font-size:.9rem;margin-left:.25rem}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--panel);color:var(--text);border-radius:var(--radius);box-shadow:0 8px 28px rgba(0,0,0,.45)}
+.leaflet-popup-content{margin:.85rem 1rem;font-size:1rem;line-height:1.4;min-width:240px;max-width:320px}
+.popup-title{font-size:1.15rem;font-weight:700;margin:0 0 .35rem}
+.popup-address{display:block;font-size:1.15rem;font-weight:700;line-height:1.35;color:var(--text);text-decoration:underline;text-underline-offset:3px;margin:.25rem 0 .55rem;cursor:pointer}
+.popup-meta{color:var(--muted);margin:.15rem 0}
+.popup-detour{font-size:1.1rem;font-weight:700;color:#ffe08a;margin:.35rem 0}
+.popup-trailer,.popup-range{font-size:1.05rem;font-weight:700;margin:.35rem 0}
+.popup-trailer.yes,.popup-range.ok{color:#7dffa8} .popup-trailer.maybe,.popup-range.tight{color:#ffe08a} .popup-trailer.no,.popup-range.oor{color:#ffb4b4}
+.popup-links{display:grid;grid-template-columns:1fr;gap:.45rem;margin:.65rem 0 .35rem}
+.popup-links a{display:block;width:100%;text-align:center;font-weight:700;font-size:1.05rem;padding:.75rem;border-radius:10px;border:2px solid var(--border);text-decoration:none;min-height:48px;color:#fff}
+.popup-links a.streetview{background:#2a5f8f;border-color:#1e4a70}
+.popup-links a.directions{background:#3d5a40;border-color:#2d4530}
+.popup-actions{display:grid;grid-template-columns:1fr;gap:.45rem;margin-top:.75rem}
+.popup-actions button{width:100%;font-weight:700;font-size:1.05rem;padding:.7rem}
+.notes-box{margin-top:.75rem;border-top:2px solid var(--border);padding-top:.65rem}
+.notes-box label{font-weight:700;display:block;margin-bottom:.35rem}
+.notes-box textarea{width:100%;min-height:88px;background:#0f1419;color:var(--text);border:2px solid var(--border);border-radius:10px;padding:.55rem;resize:vertical}
+.notes-box .photo-row{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin-top:.5rem}
+.notes-box img{max-width:100%;border-radius:10px;border:2px solid var(--border);margin-top:.45rem}
+#modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2000;align-items:center;justify-content:center;padding:1rem}
+#modal-backdrop.open{display:flex}
+#modal{background:var(--panel);border:2px solid var(--border);border-radius:var(--radius);max-width:520px;width:100%;padding:1rem 1.1rem;max-height:85vh;overflow:auto}
+#modal h2{margin:0 0 .5rem;font-size:1.25rem} #modal p{color:var(--muted);margin:.4rem 0}
+#modal input[type=text]{width:100%;background:#0f1419;color:var(--text);border:2px solid var(--border);border-radius:8px;padding:.6rem;margin:.4rem 0 .7rem}
+#modal .row{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.5rem}
+.marker-wrap{background:transparent!important;border:none!important}
+.badge{width:34px;height:34px;border-radius:50%;background:#fff;border:2px solid #111;box-shadow:0 2px 6px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+.badge .logo{width:22px;height:22px;background-color:var(--tint,#2f6fed);-webkit-mask-position:center;mask-position:center;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-size:contain;mask-size:contain}
+.badge .mono{font-weight:700;font-size:11px;color:var(--tint,#2f6fed)}
+.badge .note-dot{position:absolute;right:-2px;top:-2px;width:12px;height:12px;border-radius:50%;background:#ffd166;border:2px solid #111}
+.toast-copy{position:fixed;left:50%;bottom:5.5rem;transform:translateX(-50%);background:#243044;color:var(--text);border:2px solid var(--border);padding:.55rem .9rem;border-radius:10px;z-index:3000;font-weight:700;display:none}
+.toast-copy.show{display:block}
+@media(max-width:820px){#main{flex-direction:column}#detour-panel{width:100%;max-height:42%;border-left:none;border-top:2px solid var(--border)}#map{min-height:45vh}}
+.marker-cluster-small,.marker-cluster-medium,.marker-cluster-large{background-clip:padding-box}
+.marker-cluster-small{background-color:rgba(47,111,237,.45)}
+.marker-cluster-small div{background-color:#2f6fed;color:#fff;font-weight:700}
+.marker-cluster-medium{background-color:rgba(230,184,0,.45)}
+.marker-cluster-medium div{background-color:#e6b800;color:#111;font-weight:700}
+.marker-cluster-large{background-color:rgba(31,157,85,.45)}
+.marker-cluster-large div{background-color:#1f9d55;color:#fff;font-weight:700}
+
+</style>
+</head>
+<body>
+<div id="topbar">
+  <h1>DC chargers 50 kW+ · Canada &amp; US</h1>
+  <button type="button" id="btn-locate" class="primary">Locate me</button>
+  <button type="button" id="btn-settings">Range settings</button>
+  <button type="button" id="btn-refresh">Refresh data</button>
+  <button type="button" id="btn-export">Export</button>
+  <button type="button" id="btn-import">Import</button>
+  <button type="button" id="btn-a-minus">A-</button>
+  <button type="button" id="btn-a-plus">A+</button>
+  <span class="grow"></span>
+  <span id="status">Loading…</span>
+</div>
+<div id="settings" aria-label="Range settings">
+  <div class="field"><label for="set-kwh">Usable battery (kWh)</label><input type="number" id="set-kwh" min="10" max="200" step="1"></div>
+  <div class="field"><label for="set-pct">Current battery %</label><input type="number" id="set-pct" min="1" max="100" step="1"></div>
+  <div class="field"><label for="set-cons">kWh/100 km (no trailer)</label><input type="number" id="set-cons" min="5" max="80" step="0.5"></div>
+  <div class="field"><label for="set-cons-tow">kWh/100 km (with trailer)</label><input type="number" id="set-cons-tow" min="5" max="100" step="0.5"></div>
+  <div class="field"><label for="set-reserve">Arrive with reserve %</label><input type="number" id="set-reserve" min="0" max="40" step="1"></div>
+  <label class="toggle"><input type="checkbox" id="set-towing"> Towing trailer</label>
+  <button type="button" id="btn-settings-save" class="primary">Save settings</button>
+  <button type="button" id="btn-settings-close">Close</button>
+</div>
+<div id="searchbar">
+  <input type="text" id="dest-input" placeholder="Search destination address" autocomplete="street-address" enterkeyhint="search">
+  <button type="button" id="btn-route" class="primary">Route</button>
+  <button type="button" id="btn-clear-route" disabled>Clear route</button>
+  <label for="corridor-km">Near route</label>
+  <select id="corridor-km"><option value="2">2 km</option><option value="5" selected>5 km</option><option value="10">10 km</option><option value="20">20 km</option></select>
+  <a id="btn-google-dir" href="#" target="_blank" rel="noopener noreferrer" style="display:none;padding:.55rem .85rem;min-height:44px;border-radius:10px;background:#3d5a40;border:2px solid #2d4530;color:#fff;font-weight:700;text-decoration:none">Google Directions</a>
+  <div id="route-summary"></div>
+</div>
+<div id="main">
+  <div id="pick-banner"></div>
+  <div id="map" role="application" aria-label="Charger map"></div>
+  <aside id="detour-panel" aria-label="Chargers along route">
+    <header>
+      <h2>Chargers on the way</h2>
+      <div id="detour-filters">
+        <label class="swatch"><input type="checkbox" id="d-blue" checked><span class="dot blue"></span> Blue</label>
+        <label class="swatch"><input type="checkbox" id="d-yellow" checked><span class="dot yellow"></span> Yellow</label>
+        <label class="swatch"><input type="checkbox" id="d-green" checked><span class="dot green"></span> Green</label>
+        <label class="swatch"><input type="checkbox" id="d-trailer-ok"> Trailer OK only</label>
+        <label class="swatch"><input type="checkbox" id="d-reachable-only"> Reachable only</label>
+      </div>
+      <div id="detour-status" class="popup-meta"></div>
+      <div id="range-status" class="popup-meta" style="font-weight:700;color:#cde4ff"></div>
+    </header>
+    <div id="detour-loading" style="display:none">Working out detours… this can take a few seconds.</div>
+    <div id="detour-error" style="display:none"></div>
+    <ul id="detour-list"></ul>
+  </aside>
+</div>
+<div id="legend">
+  <strong>Show:</strong>
+  <label class="swatch"><input type="checkbox" id="f-blue" checked><span class="dot blue"></span> Blue = regular</label>
+  <label class="swatch"><input type="checkbox" id="f-yellow" checked><span class="dot yellow"></span> Yellow = fits trailer</label>
+  <label class="swatch"><input type="checkbox" id="f-green" checked><span class="dot green"></span> Green = trailer charger (your tag or a listed source)</label>
+  <label class="swatch" for="f-country">Region
+    <select id="f-country" style="min-height:36px;background:#0f1419;color:var(--text);border:2px solid var(--border);border-radius:10px;padding:.25rem .45rem">
+      <option value="all">Canada &amp; US</option>
+      <option value="CA">Canada only</option>
+      <option value="US">United States only</option>
+    </select>
+  </label>
+  <span id="counts"></span>
+</div>
+<div id="modal-backdrop" aria-hidden="true"><div id="modal" role="dialog" aria-labelledby="modal-title"><h2 id="modal-title">Info</h2><div id="modal-body"></div><div class="row"><button type="button" id="modal-close">Close</button></div></div></div>
+<input type="file" id="import-file" accept="application/json,.json" hidden>
+<div id="copy-toast" class="toast-copy" role="status" aria-live="polite">Address copied</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js" integrity="sha256-Hk4dIpcqOSb0hZjgyvFOP+cEmDXUKKNE/tT542ZbNQg=" crossorigin=""></script>
+<script>
+let META = {};
+let STATIONS = [];
+const STATIONS_URL = 'stations-na.json';
+const LOGO_MASKS = {"flo": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAEUklEQVR42u1bv0scQRT+brn6VK5y4YiJpDjQIgRCIGdSCJYWwtUaQbBLodekCCSFjRqwEwLR2gMFy4Bg9FKGEBSuOJIYDrxKov4DpnAurMPOe2927253s/cacWZuduab9+N7b2czNzc3SLM4SLn0AegDkHLJRvDMEoBZAJda+0cA9TQA8AZAzqf9TxQARGECOUN7Iw0+oEj0tdIAQJ7o+5kGAMYM7dcAzpMYBbwqfSXYxKih/SopYdAFMA1gxuDMZhgQRgztZ0kAYBHAHDNmgAGgYGj/EXcAPgAYF4yrMwTIJKdxpsKrws1fM/2zRN9FXAEoA5gQzvWb8R3jATUnUgAWLOb6SvS9DaE5kfmAEkFbmwA2NNWtE1o0HlBzIgXgOWMaUp6wxIz5Fdd6wCND+4kFZ9gSjGvEFYCBECdWBLArXEMrriYQNG2VEKbIkyAOgGIA0lIC8IpgeyY5jyMAeWHMLgJ4QeQGYclTTwFYBDDJ2D8AVFV/rgPP/245vqRS6scABjvw/IOs5ySldlvo4AFIk6CyImW5DivAXDsKvOuShjUBvAyRA7hK45a6sHkAOHGUWhW6MPm6gDCdMuq+26W1/QvpWeW5OyXXatGbnraxAElQEcBaD3xgI4vbFxSFkJs+BHAEoObT/zBABNhCb6SVVc7lk9DG9j1kqKVIDBfH7xvaTXXA1xLbVQc3KKhVtA9oCLcvX4Y8DriWUfcDXCF1fRoAZRO4+wBWfJwetY5jABVD0WYiyLodDxtbFmxmNQAANpR6mtG+iqGvwiRpJc/fkikZqinPTcmEIkxScS2ToElCjVeYZ70n+obVWi50qu/4sDyWPIAucHrlgWUSZHLGEvOkymp5peV5faxjkQR5ZU04dkyYBLnKV5jkc0hvf+HR8hpVD8hbTCoJVaMEQ9RrBznmBCU1COuag2NxYqbEiJIRQ/uZxylthdSktswHqTk4whOjEiPKKQ4QSVDZgu1xiRpVvm9SXMURnhi3ONcyBE6CL5b68Qm/5ywyc+1Qk2a0i5Im0tJk6LIfQSl2idI2lQlJWeAUNcDRPLHpxDbUJil+4IZwqDZVooJ6nuR1HZvoORYxu8LMNd2B013uYHa6DsErN0djS1zMppiizuJqlqc+o35TFzBSTraFpO4OAJK0tUqoaMGwEIlNT2meuhoChGWtHiEGwJS26u/uDi24/ybjO46JqlFVaYX0TdS+yvpsNO9OVfieqWyk/X9E2LvfDZGKigjznjD7DcCewEbPVb3CBfAMwBPPHJdqbUe2mzYB0M0LjHWBE+WAqErt2kacADx6OGBGFktxBDFb59ELggQncQAMC/i8i9vLUiZTOUgiAFkuXVR0lqPCsAk9cdQA7hU1t/ltJFS8RdGgNnyS1NPXidBOwMxsAQkWR2Nexxa/pVhcYiTj8+Ekd8WlfUWuhv9AMsSXo2UtQWoA+IKIr7T0EoBUSP/DyT4AfQDSLX8BEEDqonKncQ4AAAAASUVORK5CYII=", "swtch": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAACE0lEQVR42u2bsU7DQAyG/0NMZYYF9RHogNQ+Al14iKwwVmEtoisSbGXOY9CdpZVAKiMba+ciNrNkqCqq5E62706xpahSerk4n32+s3NxRIQuyxE6LgbAABgAA2AADIABMACxpKyPeEJEWkdJRGtqJ3MtvZxCLjAHcBN47QrASFI5aQBcnb8AuM0pBkwZHx61B21z8YApgAdJr00ZQAngUSF2u1QBaFVXFgDGqQH4BtBXnMFZvIAzCPY9LbgvmwDgyXjAEsDQ03r7HuMChpFLxQOGAdf8Mtz3KedcgAPAdY4AVvXvO0Nf5ykAKD3Gq9tZ2xc759w/7b5UphKmIEgtAXBPqz8ATrpcENnmGAM45aPrAN5SAbBomSVyryxnKeUCTR1tAJxFDqxRh8Apc3B7Ti0ZqpisugTQa9FukhqAwsO1lwdiBLXMKxZcSnMXRF4BXAVkc76VY7aKEHcMCK3S9DzarjgVlgiCFWRllDqAQvDh2eFKTYP3Qv0WuQCY1Zkaa+YqoajkQsgnTb1s+P9TSknplWDTao3q46Kh3SBXABOGoXAnqaBT2iobehPx1+NayVCoFUfSijnFzdIhL0/ERTMd9rFmpaWUi7BdnlKxvrYHtLWu01QmBoAi1pSXyhA4NBTYNj2k7gGHEqZxDCVc5G+G1vUy2MVS4BhxZYDIW2WdfTXWcTEABsAAGAADYAAMQHflD0AMQltlrbXNAAAAAElFTkSuQmCC", "electrify": "data:image/png;base64,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", "chargepoint": "data:image/png;base64,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", "shell": "data:image/png;base64,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", "jule": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAB80lEQVR42u1a222DQBCcQ27A+UoXiWSlhfDrFpIyUgB0AS3wZcm0EEUKjcQlXH5AQlHC49g9drO3kmVs0ImbmZ3bPXDeew/DkcF4JAASAPKj5RzcCTfBDsAjAG8VANd/e+secLMIQD06biymgPvx21tOgVQHcPmAJgAa6x7A4gPJA5Td7806AI11DyD3AckKKKx7wGmiQzQBwNMf/18stsNsPpDqAKX33VkBoOD2Aeke0ALIOX1gTwDcgkncANxxArBXCpQLrzty+8BeALwRjHHRmgI1gNcVMnYT57xGBQyTryT0BNkO7A9x3tgTDKuEqhRwAfKdWgk2p0FMBYSydfwvKZDH7vUlAdCtyOtYyorqAVsfc5UztYOXrACKndwTGzMRFEDxgINtJch2YL8KGOedywe4AfiNtXPAOPnM+Q9NpfDadb1ecM29RA+g2NAcN05T8RVaMB0is7+0AGoXyJ6kWuRKgTJwOSt75ayZ/FXiMrimhx/eBQwNcc1QueB8N2J7t8lzKcBF8JIKwAvFQNQmWDNP/ArgWXIpzMV+8DIX0wNaBpn7/sO2KUKpACr2PwE8aNsQaQnZjjZ5SgU4DWxzKaDTwjaXApwWtjkUMLfdVUhim0MBLlbBwhUHYvbZChbJJhilYNFQCKmM9JpcAsB4fAPNt7JnwZ1UEgAAAABJRU5ErkJggg==", "evconnect": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAEMElEQVR42u2bT4hNURjAf29S02RW5G/xTGKKho03hVgoZTGvLDRkForHxlD+jMVIk2TKjPy3IGQW/k2SemRBFqahZlZMFtLESynEil5Taiycy+l0vnPvfe/eqHe+Fefce7/z/b7vfOd83yMzOTlJLUsdNS4egAfgAXgAHoAH4AF4AB6AB+ABeAAegAdQgzKlgndyQDswD1gKNKrx78Br4AnwGCilsN480AKsAn4adjwHxoBXcXRnInaEskAncBCYcDynz30DjgNXqjQ6B/QAiyPoDGQcuAoUkwDQrwwnhvEkACILXHQYHuisd+geV7pHKwGQAwaBBRGMDJsDGALaYoT6hSr1lbU/3wd64wDIASMxlYYtaAL4ofLHaEjEtUfU5/J+GWjQQAwD+6IkwSjG1wN3gA/AGzXWDGwA5jvenQrMjmi8JPXAPZVwA5kJtAILDe/rEFYD3WYk2CJg0kH8LbA9xIOBIbssAJ4CW4R3CsARR0Q9BG6G6M4CHcBGw/v6Nwf0fGQCuA1sFj5+EuiKmcROAOvU338ATY58c9cRcQeiZHTje9csAILvrrFdhLIO43fGNB51Fm9RxAH2Op7tccx1xDQeFSVtKgpsctoWAZL37zjCNs4Fphhj3wfeX1/lhSqnjlLbt9eYAKS9n0n5NloSwvRABZ63SbfKCea26gOKdRopad+nKbeF8esJGQ9wQxhfp+eA5cJDF1I0PgesFOZ6E46wj5bxJh1As+WB9ykVNGGJrzMFXSOWY3W6DmCe5aXvKXu/xTI+lmDo6/L5f+sHSN7fnZK+T9Jd5V8AyAvev5filpsl5YcAwAfLZGNKizknjJ9JEfpMoab4swWeWR6Y4zgeK5V+y7ZrAC6lnHBbLWMfdQCvhNtSe4KLyAHbhLK1N0Xjc0HGN+SdDqCkjj1T9qgaIQkZFIqTzpRzzlZh/Kl5CtwVHnyQwCIeqF5AnGMvn8AWzAMrhLmiCaBLqMMXqb1bjfGtFRx7O1RJm68i9A8Jc4+ke4B099/juLe7FvBZM94M/2OOxFcAlmjX4u6YugvAKcd8r6sjNKa8jpAYL6v9POowvMfidR3Ai5ASu6T0mX2/s7h/cyioPsBc5F5hn77tbACy/O3zSe0p+N3ufq1dmRtVjT0hZHodcFuI9w7hbnqOB1lcK2zmamuV3ntEhJ5g4MWhCBBwKC1rHZlyRM8HiSvKsVgOmZ8IM95VC4yqCvFtBOMlhabxgxE7S0UVIeP6jc1ifIOhx7WWAQlqXcg+bAHOC4uwXi2Fo24T8XqKJdXFuYW77x8WCV+B/Th+lcrE+NfiBeAwMC3i1hgBjhLeQg+ToNVt9v0bHMYPE95Cjw1AX9AyYK3RSwh+JHmZgNFhuoNqcgbwRav5Y+vO+P8vUOPiAXgAHoAH4AF4AB6AB+ABeAAegAfgAdSi/AKaJCbZqBowoQAAAABJRU5ErkJggg==", "tesla": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAC8ElEQVR42u1bq5LbMBQ92tk/KMiSTkFpvahlCxwY1E/wfkBpWZaVlZZv9xOCAmsQFs+CjalBxsQB+YZbIs2oqh+SLcnPO+ORR6Orx8nVuUe2w4gIDiwE8IGXn3jdZ8M+El6mAGIAZ15aNdYBgADAOwARgA2AFfzaBcAewAuAK4CTSwDEYh8AfG3xa/qyBMAOQA7gVQeUOgDCESxYF5BD1fZRAQgthvSFl3upLtP0/Sjdb3i5srhlYhWALYBvLQcRHYtOnZCVQq7iftNhzr8A/GBkzoIirHYle0xl//d8ghcAd4bjFJJv3pANAr5VzbcrERXUbM9EFBARpCvg9Tr+RERHxb/uOmr2WTTMrdFfOFQtuk2nTUA2Ld7GGIFmn4GKeEFEkbLoI9m1bc3iI8tjHRUwIiliCyKCPHgolVtya2HJ4kPHY26VNYKI/kuDzwAePeVoptKRR23wpUwHBADePEvZO4Xxfdm9yGC3UuUJwBrAH0+TWPGIg+fFr+X0XSaFQ00QEgDf+UEEFbqbHG0XEbHgZ5Sfmvl/rWqIurMA6YRQk8xwCEAZIG+mfdw0ODyV1D8aHD0vlkhLx04VBP5UC6ChMisM1JwNUaMrnuSrMFGeJg9EhM5/MTy8dCXVe5g97IhMDmTM0SMxmzzAXE7uBjO3BQBP0rOt/Z4CALsOvpnryfkgwS5EyBYOWACYBgCJJ5/BApB6Js/BARC38DlMCYDXFj7XhQQ9mC8dYKoF2rxJGnwEmMja/RR1QOao7WgAyB21HQ0AZ0dtRwPA1VHb0QBw0pS3CVp+8DQGHZBaajNaADJLbUYLQG6pzWgBOFtqM0opLKzuVbg3CdznYSgfSvj3BUA6lAzQFwDZUDLAsgV6IsG6ZwNsDhEwKOsLgESzbrIApEPIAH0CEGvWTZYEy4jQ9FOYyQHA5rQFhO4vu58NAPuK+9kAEPcpgYfAATIPsDlGwKyV4AKAJH8vfU7gtmcAdvj3X6KzA+AAT1+CVNlf79FPLFNQqCQAAAAASUVORK5CYII=", "circuit": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAADyElEQVR42u2bvWsUQRjGf3tExZCLXgJpJKspNM2lCILFgYUoGLQRLBUkFpZ2dnfVpYtV0idEEvwLDEljI8bSJpWNSbDVGE8UTGAsblbW5WZ35nb243bzwHIfM7MzzzvvO/PM7I4jhCAmakAVGAc+kg5mga9ABziMcyMnhgHqwC75QN9tqRjmrwIN+T0v5P1tacg2JuIB9ZyRttJWHQPU4sZZhohse6XA5JFtr/VrAHfAyfuN4JqGQK0g5CM5VUpCXhkOjgUhNNCo9Jg+io66ygOqUlqWAf+4+j1gpkSeP3M6BgTGgHoJudfz6gFN4ALwIo3KHCFElvN+EzgnP38AP31pI8Ao8Ap4kpQ4coQQLnCQAfm3wHVJOswNHZn+OgGvcCt0d3LSRBs4AqblVBQVg176M2DNclvG0x4DVoCHPr1xrMh3VmGYKrAEtGyOAWmRXwMeAN+AM8ClkLx7wAlwvkfab+BqUlI4KSz6yF9RkG/JeHeAKUnyk/ztx4QMo4HxAM/tRxXpq8DTkPJHPSS6NS8wNcASMCZ78rlmmbAKosh7oXMncJ+q1AqxMWSQN0hkDHisMdWp0AIWNOqdTHM5bIKbGnluKf7f1iSv0gXDeTCAKxWcClshaXMG9Uz38L53eZkFJkLS7ob0oMnUGcQI8D6LWUAYEhIxDeDphk6g7AlwOQsP2AmZGXTdf9VgkXQ7QP5Yepw19+92kxC6V1OosRTIq4JOPW0hxJce17HBPbQvUx2wj/ohg2PB/dvAfKDX/bJ52UB/WNcByNgTITG/CXxQpEdtuB4FlsZVOd0NJUW+Xym8Djzqo649qfGDA90kcE16xx8psIKy+cDmwGdjLfAGuNdHuU3gInAD+OX7fzjEGzc0FGcqg2Dw2hfJY92wTc2kB0HTxU4s7zTIu9VDeGmVr1hq6KZF4suG5EWI6kxtQ+R+TEMc+IjrjvSLEd63mPWGSNSNd4Dv0nim2NLodSdrA0Q10knIsKopN/U9wTkNIiuGxK2ST9oAOr08T/eJUDMiznXd1Ih80iHgYSWg75PCtuFGS2oG8Ja37Qw9LTQEZlMwwALwMqFed2KUn83i4ehnug9H4kBnO10HboX03wuakr3WMqx7W3qRY4k8QCdPL0g0FaGT7DQlDTBIb4LbQh3YPX1Jyve9USLejV46oPQvSnYoz6uynbSV4ECMAR5qBeZb0zHAYUGNoH1gwjOCWyDyyuM/UWNAEU6PhHKI2hAZ9HCIfWwO3w0GaYqsB9oeywAedvn/6GxeFV7VZF1T+sPTTtmPz/8FfgfAqC7vGDkAAAAASUVORK5CYII=", "ivy": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAGl0lEQVR42uWb34tVVRTHP+feO5k6VpPOSEX5I4aSURhMs/wBJdiDEGj4Evge/S09Cj0FgQVChAoTFgkW/dBEC2mUjAmd7Jc6iZnjlM09nR7uOrjndM5Za+9z7tVyw+U8nHv3Xt/vWnv92vtGSZK8xl08Wj1cK/H8fvR/ICBxwCwCBoGFwH3ynCfvbwI3gN/lOQVMZ37/nyEgFXoB8AjwJLCiYK1Yns2cd23gPHAW+AmY6QYZrS4AHwJGgVUCLM6ApYSI7BZYCQzL+2+AU8DlOolo1Qh+CNgMLHdAxTXMnc6xWj6TwGdCRGUSoopRIBFT3yzCxfRmNIHTQsRMFSJaFcE/BuzMmHovRiyErwIOABdCSWhUAL8J2GXY390kAZFhU0CYDbKARJh+SfZ6HGi+FmA+RGwAHgTec2TsCgERsFvieRwAegq4BFwFfpP435L3DwADwFKZ34eMWKLFTtkSXbGARDTvA74pXns8E8u1keYQazwsLZbv7gT2W63AGgUS4AUPT98EJoCjwJXAuO3mFRucfMAaIT60rNkyCrLGCL4pGdw+4JeKCUv6u8vAmEScHSKzllStlvXHtfUbBvCLgW1G8BPAHlk8qilbS+e5IHNPGB3pNpE9qRoGtxvBHxVNWbSeGD5FFjEma1lI2F5lC6Smrzm9JvApcMKo8UQqwwFFrovAHwVEfCEybVFkGxQMhVuhjIA+YKsB/Fce4NOxwwl1FFSCe5RtcUJK6rUlMsaC4azMad4CiVR0mplNAR97gE+AhxyryvsAvG/I7CJZe8qwPUeL5muUTP6sQfsHA5yaNu81cXRWUg8qioplzchKQFLSwMju++ue2h9yyuWieT/xjBDXRZam4lNW5FlBkQWMGGLtyYAwt6Fm7acknCza4468I1YL6JNOjBbyfKqvNJ8YrlH72fmPKVawUrCVEpAASwzO70yA9jcq70O071rBGYMzXJJVXJ4FLFMmmvQoarLaj7ug/XTMiGxlY5llCwwqgk4ECPdUF7XvjrI0OQYetiRCQ8oilzy1P6AUUk3gcKYCLCuOqsg2oBHQB/Qrk0x7amq9IWdfqTjeK4bKLpJGS9noF4ztMgLKGpztgvw8VPvpWKukxW8YSW/LJyqxtjkENDICz1MWuOEZ/tYbvxeXfN70cLqJyFg25rkYfLvCf3kIsohqZwVN4G3PbNNHxiAC7qnR82vg98nej7oo4xwfENHp0paNhcZmxyJgHfC3oVDJAz/mdJV8E6KFynduuvNmneCsYrItYL7iCCPgT+B1ma+v4NkAXsmATIus0JxgvvK7WNYu3AKzEua0UKI5wjRaFD1n6RxktDLgjwc0V1zL61csblojAG4dPxeNpdQz1uRkmJ9XzAY12a5anOCUkk4O1wB+AZ2DzZhbhydjNaTCWr3xs4WA75VFlguA0JEAjzskX6sJ/AKl2YKFgAj41RC7Rwg8jZXxtEPG3uy+rECqlmz9K7LkWcAscC60x2Zsi93vZHmzNWg/Ap5XFHcuj+hGScND67GtC7SCUXnuC8jyikhdh97DPGPNBCPgB0OPbYskPInnPl0NvEs9d3zSpEs7IGkLpshqAbOGHltM54DDR9gRqf0vUN91tx3o7ftjRX6m7FzglMEZDgLPGa0gonMpYrwm8ImsPWhwfqfwOBdwreCIwQrWStlrIeG7GsE/Q/mxWKr9I2VRpqFobBz96Cn1B5vozUgvaG00WOiUZnGWcvgQepscOldiQ8AkRutJxNO/iH7Akmr/kE85XGQFV8RxbVNaZXs9wbeAV4EfpQ44Tf4Nr5Qc6w2RFPxhSz+hZXRe43ROdfM6PE1jQpPkkBYBj0oKu5W5lx7dO0LpFdzYCP601dlab4lFdC4d9TP31lYf8I5UWRr4xZIBljVGdtE57b0oqe0oc4/SLZ2kSYwXpCDsrvBuJ/RYb4akXnuzdIm0jlDZew28+YpcSE8Q4C1ZaMKzeREL+FjRaIz/TfMg8D5bILsdDshvI08hq2i4bN6jdO4NeecYVW6Ltz1J+xr4NmN9uysCj6WuCE6te/mnqRn8TpUtnv6jquV0LwkYAO6tCBrxPcedarJSat0rAhLgCWMUyAMdi8a/JPzu8W23ADcKWLTdFtDnxcPP1gn8dhDQzAm7eWRMS3KV/d9gV/472CsC0js82V7jyzla3++0yrr+79FeWsC0AHNJcXOCSeADKv4L7E4mILt/W+LRL9I5i7jcjT1+pxGQTaTGCsi5Kwi4baDd8Q+/tezYVxzL2AAAAABJRU5ErkJggg==", "irving": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAC7klEQVR42u2ZPWgUQRTH/yeCgWjQ2ipJbVo9EW1PrIQUsfZaU6yViYJweFamOCFVrvVSxNLgdbFJAnaxjrk+hbJRQZuxecJzeG927ty99fbeg2V33s7Ox2/mvXmzU3POYZrlHKZcDIABMAAGwAAYAANgAAyAATAABsAAlCRr0wpgE4AD8ALASVmNqJX0Q0SrtAugWWUAhwCux7SraibQplH3O/8BwLoyQw6rMgO+AZiNGOU9AHeEfC+LdJRFAtgFcHcEO5ca9B3AxUkyASd0fkCj3oyw/66nm6Uyd6qyClggZAD+cwA9srljpmuRTrpSAInnAxx9I/kHF0iDynOKQ0wDZR8pbQt4K+eki0si6DRJnHMdT8fLTZm+55zbZ+ljpf4jpk8CZWdJR+prjAlcUfQ/Bd0rAKuBsi6x54/e0naV7on3zbURQ+vPXvpRnj5gG8AMLVn9jLw9pWMbSoA0zN4BADpe+jW1a5HuZ6Q/KMoJzgnUOZT7dF8OjE6MtAiaL/e89KrQvhqAm3kCWGFOps70i3RvMN0FuvN8b0ao86miX2DPB4JzdQGHmusy+Cnwzp/+z4Yo9zF73h9itoTMMRcAZ4Kz4hVwM3geAeqXot9gDree0Y46A9wXTO00Tyc4J+zoVthzQ/H+SyPUNxN4904Z/QYzSc0/5GIC22MK2rSZ80DwFSkFcZkbnRgAXwTdqbeea/buw+kL21xpykuyFOkn/sy4hai/TEok+J6ip5TpWkoEBorWtHcu8A5CxMkjxl4gfyejrqx64Zyr7HY4yZhN9j/AtsMk5wsocw3ALQA/PP3ykOVseenLAL4i73ODkIP4h2tTcUZ7Ed+2lW9Pimhr0T5AOwjRfnXH/kKfGB9wQ2n8E/x9HrhDQYvf+S4KPiUa5yqwBeBhZN4BgPmqrQJNGs1BRr71cXW+rGVwHvJ54FsC1B5nY8oOhHYB3EZBx16TAMAiQQNgAAyAATAABsAAGAADYAAMgAEwACXIbx7eL4LQPYqMAAAAAElFTkSuQmCC", "petro": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAEvUlEQVR42u2aW2wWRRTHf19FhVZUrC0Xr1iiRsUmKkaMTyTy5IsRNSHEa3joi0UuLRgkII1a1EZ9kPogLwaNKSEKEiJaNDUixgh4SQxaiBdsbVFRClawcnzY0+RkOt/ud2+/7p7ky86c2ZnZ/e+ZOf9z5kuJCHGWCmIuCQAJAAkACQAJAAkACQDxlQke3VNAJfBfCQASIFWiOQQ4BjxjG1MOFX4aWJEGmPEgPwAzw5ZA1Th+eYArgcfDAEjFbQ9IvMAoz78J6BprXqBU0g08anbq2FnAB6a8O24A7AMaTP194GScAPjQqT8L7IwLAB8Dyz36vcCf4wWAk8D3ado60+hfALaEMLiyAuAg0A5sBv4y+i5gXUi/xcAhUz8MvAxsBQbLyQ3WAW2mvkWDq/sz6PsqcCswADyiuheBSeUEwAVAK9Cs9QVZ9H3Oo7u0HDfBQj70zHIEoKaAY00vRwBmjFEwSwbAFQUap7WYMUsxAThvrJt/oQB4G/g2TVtbETfTTzSmGHUA7gauA37ztF1dgPGvShNL3KFBVFEB6AX6Q9r3mPJGJS9WLi7CXvIVME/LKx2maeUU8KNeMyZCbmJiN7CfIFk6VQlOtZplj/MF1ihbW17A9esGTT1AvaN7DbhN5+7V3zHgKHAauBe4PVcmeKEGKZnKCqAWeEDrl+cJwFTni7Z77lkWMcZj+SyBOTk89IPADlNfmgcA55jyK8D6LPs3R7HIKAuo1UFas5z4LuAlNct8PEEjcD7wC7A6h/6RFpgJwbgkj4cvhDycZ1SatxssWiBSArkhWwB8J0P1Zfry6zOx3ooINwhwWY7rb7SlNhcidJbnnkNASxkC0A/8m+0maFnTaeAAsKtMl8CTwGRljbNVd8a18pTnr7LvKONqYHzJG8orFkQBECupSBPgDAB9BKc1LcrsBoAhNaFB4He9p5/goPMn1fcSpLIh+DtKn/b5FFhi5tkAHNG27RpMdQNfKodo0nKnjrdNx0CfqRv43DC+z4ATOl+HmaeTIL3e7kVAROxvk4yUAclNvhGRIUf3hc7T6Oj3iEiPqb8pIptNvd+U14rIPlN/XUS2eebvFJE2R+e+7wgLqIzI7BzVr/Wz0aVLSlzv8So3EZwD2vOBDo06pzt9bSBU40SYs5145RrP/PNM2Dwsz0ctgTMRS6ZG+f0Bo9tLcOgRllPocAKUuYZ33OcBfkYIiZnleK9ZTtZoVwiJq48CwJc8OO7U9wO/mvrfnqTECcdqDpv6kCn36bXa6V8dwuPrPNyl0uEtGVNjlwdMcl5iu14XG90E9a/DUgVM8VDq4xrJ3eiY6Ea1gFuAacB7wHzPw56dYYbIlTD3PS0bKjwZWKicwO4Hc/Wlh+UfD+Oqcr7KuXr9QxMUW03b/BJ7vpYwCzhIcLT9tdGtBRap6Z1S8z+iubkpGqt/BNysrmiifqVuXf8PmXSWdY8TgXt0w0Pvfwu4SEGp06XVpSAPW5IQZKF3KvANOtagZrAA3lULmqMb7HfAncC1I5a5xzUs9bkLEVkjIk+kaXP7LTHlVSKyIaRfs4is8+hXi8gyz72rHF2jiDTp/Cu1bNvsvU3uPAkTJOaSAJAAkACQAJAAkACQABBf+R+wKZ6CQ++FlwAAAABJRU5ErkJggg==", "circlek": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAADfklEQVR42t1bPW/iQBB9WJf8Buo0XEuLjED8hbRpgtKaJu2V9wsOXXciTdr8BQTCoqU1DXV+gyl8RRbdhlt/zOyud5wnRUTINvbzzNu3s7O9oijQImL1OdS+GwI4qP8vn2lbN9TzSECsHu4ewAjADfH8M4A9gDcAS28MFEXh+i8piiIr3CNT13Z6vy4jYAXggfGmwYiMVwBzKSmwAvCIMHixJSKyODcBkAd8eKjfztW9tBoBq8APbsIWwNQ3ATGAdQt5bqMPM8owSiEgBrCDfJBIiAj53oWHh4rOnWa6rAmIAfxC97BrIo51KRB36M2XYVyVDnUE5IIFj6IJt5wU2HyBh79owoYaAZxxfgvg1PBYimW+WF8KTNdfGCdVJZMEDmLCJCTzdF2o403ITcebUiATFL4LRm1gXZEKWZ0GxAAGgqwttQ5Qp1uDa39wTcAfQcpN9fUJgEmD436WESDp7T8zqk9NzdpEjwKdgLmgvF86yvsyzE3DoK3pGRMEKyuJtkrTUpH3E0aK3eoRkAgxPTNPeW8aERKdgPsODnm2k7ShTsCog0Pe2vI3RxcC4sDhzxnyXMxTBpSCyFfIe2MaRfi8TNU2XhhW12VxZhiSgCPDe+SO72EYAbgL8PDvAJ6I56w8aNXdt0Bvn+PzvaxDRAD6Hajq+PIp/QjdwFQNl14ioCuY+SLgPcDDbNBw4UJDquyyUzEOFQF9ppVdKu/gCqcIHy0oIWCs0TWcyx8d3cMhtAYM1PhOxXdHoniI8K8zKxQewWtwcCGKaaTE5RyYBI6/txXFsz4MnhAeHJ9vI4p7nYC9AAIq1/A8iOKbTsAKMjBh6gFHFJc6AanDocWFHsSM8yiiuDVZ4d+CbC+nKYMiij9MBCwFjAY6OCapiSgeoVWhro3QqyACuCapThQ/R7phzTwX1h/AbZDOm/QImKzwM2TBpSj+911Zi0zZ2l1dbjWdWrPX8ohINJdpbKyu6hKT1iHG6gVW5mpURmDVbFBaKkyYojit8gh1fYISu8Ipy/C1aNIsLZGEnqsLNSmIzOG2DBXKJLEJkEgC1ySxCbiQsBBEAreSRNaAa0jbNWIlija7xqSII9ckkVPAlBLjwDPIIyyLo7Zl8VSxP9aLDC25wrGqBKVta0CdPszhZwep0x2jvggwkTHCRxOGzebpAzztKO8F2D5f1ZLT+vb5vzxfdRSFFphgAAAAAElFTkSuQmCC"};
+const COLOR_KEY = 'chargerMap.colors.v1';
+const FONT_KEY = 'chargerMap.fontPx';
+const OCM_KEY = 'chargerMap.ocmApiKey';
+const SETTINGS_KEY = 'chargerMap.settings.v1';
+const NOTES_KEY = 'chargerMap.notes.v1';
+const COLORS = { blue: '#2f6fed', yellow: '#e6b800', green: '#1f9d55' };
+const OSRM = 'https://router.project-osrm.org';
+const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
+const DEFAULT_SETTINGS = {
+  usableKwh: 75,
+  batteryPct: 90,
+  consNoTrailer: 19,
+  consTrailer: 35,
+  towing: false,
+  reservePct: 10
+};
+
+let map, markersLayer, markerById = new Map(), stationById = new Map();
+let colors = loadJSON(COLOR_KEY, {});
+let notes = loadJSON(NOTES_KEY, {});
+let settings = Object.assign({}, DEFAULT_SETTINGS, loadJSON(SETTINGS_KEY, {}));
+let fontPx = Number(localStorage.getItem(FONT_KEY) || 18);
+let routeLayer = null, startMarker = null, endMarker = null, youMarker = null, rangeMarker = null;
+let routeState = null, pickMode = null, pendingDest = null;
+let detourById = new Map();
+const iconCache = new Map();
+let dbPromise = null;
+
+function loadJSON(key, fallback) {
+  try { return Object.assign(Array.isArray(fallback) ? [] : {}, JSON.parse(localStorage.getItem(key) || 'null') || fallback); }
+  catch { return fallback; }
+}
+function saveColors(){ localStorage.setItem(COLOR_KEY, JSON.stringify(colors)); }
+function saveNotes(){ localStorage.setItem(NOTES_KEY, JSON.stringify(notes)); }
+function saveSettings(){ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
+function rebuildStationIndex(){
+  stationById=new Map();
+  for(const s of STATIONS) stationById.set(s.id,s);
+}
+function getStation(id){ return stationById.get(id)||STATIONS.find(s=>s.id===id); }
+function isDataTrailer(s){ return !!(s&&s.trailerFriendly); }
+function getColor(id){
+  const c=colors[id];
+  if(c==='yellow'||c==='green'||c==='blue') return c;
+  if(isDataTrailer(getStation(id))) return 'green';
+  return 'blue';
+}
+function setFont(px){ fontPx=Math.max(14,Math.min(28,px)); document.documentElement.style.setProperty('--base', fontPx+'px'); localStorage.setItem(FONT_KEY, String(fontPx)); }
+function escapeHtml(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function formatMin(sec){ if(sec==null||!isFinite(sec)) return '—'; const m=Math.round(sec/60); return m<60? (m+' min') : (Math.floor(m/60)+' h '+(m%60)+' min'); }
+function formatKm(m){ if(m==null||!isFinite(m)) return '—'; return (m/1000).toFixed(m>=100000?0:1)+' km'; }
+function trailerInfo(id){
+  const c=getColor(id);
+  const s=getStation(id);
+  const user=colors[id];
+  if(c==='green'){
+    if(user==='green') return {cls:'yes', text:'Trailer friendly: Yes (your tag)'};
+    if(isDataTrailer(s)){
+      const src=s.trailerFriendlySource||'listed source';
+      const stalls=s.trailerFriendlyStalls?(' · '+s.trailerFriendlyStalls+' stall(s)'):'';
+      return {cls:'yes', text:'Trailer friendly: Yes (source: '+src+stalls+')'};
+    }
+    return {cls:'yes', text:'Trailer friendly: Yes'};
+  }
+  if(c==='yellow') return {cls:'maybe', text:'Fits a trailer without unhitching'};
+  return {cls:'no', text:'Trailer: not checked yet'};
+}
+function consumption(){ return settings.towing ? Number(settings.consTrailer) : Number(settings.consNoTrailer); }
+function energyNowKwh(){ return Number(settings.usableKwh) * Number(settings.batteryPct) / 100; }
+function reserveKwh(){ return Number(settings.usableKwh) * Number(settings.reservePct) / 100; }
+function rangeToEmptyKm(){ const cons=consumption()/100; return cons>0 ? energyNowKwh()/cons : 0; }
+function rangeToReserveKm(){ const cons=consumption()/100; const e=Math.max(0, energyNowKwh()-reserveKwh()); return cons>0 ? e/cons : 0; }
+function arrivalPctAtKm(distKm){
+  const used = distKm * (consumption()/100);
+  return (energyNowKwh() - used) / Number(settings.usableKwh) * 100;
+}
+function rangeFlagForPct(pct){
+  if(pct == null || !isFinite(pct) || pct < 0) return {cls:'oor', label:'Out of range', short:'Out of range'};
+  if(pct < 15) return {cls:'tight', label:'Tight — about '+Math.round(pct)+'% on arrival', short:'Tight (~'+Math.round(pct)+'%)'};
+  return {cls:'ok', label:'Reachable — about '+Math.round(pct)+'% on arrival', short:'Reachable (~'+Math.round(pct)+'%)'};
+}
+function noteFirstLine(id){
+  const t=(notes[id] && notes[id].text || '').trim();
+  if(!t) return '';
+  return t.split(/\r?\n/)[0].slice(0,120);
+}
+function hasNote(id){
+  const n=notes[id];
+  return !!(n && ((n.text||'').trim() || n.hasPhoto));
+}
+
+function openDB(){
+  if(dbPromise) return dbPromise;
+  dbPromise=new Promise((resolve,reject)=>{
+    const req=indexedDB.open('chargerMap',1);
+    req.onupgradeneeded=()=>{ const db=req.result; if(!db.objectStoreNames.contains('photos')) db.createObjectStore('photos'); };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+  return dbPromise;
+}
+async function idbGetPhoto(id){
+  const db=await openDB();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction('photos','readonly');
+    const req=tx.objectStore('photos').get(id);
+    req.onsuccess=()=>resolve(req.result||null);
+    req.onerror=()=>reject(req.error);
+  });
+}
+async function idbSetPhoto(id, dataUrl){
+  const db=await openDB();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction('photos','readwrite');
+    tx.objectStore('photos').put(dataUrl, id);
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error);
+  });
+}
+async function idbDeletePhoto(id){
+  const db=await openDB();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction('photos','readwrite');
+    tx.objectStore('photos').delete(id);
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error);
+  });
+}
+async function idbAllPhotos(){
+  const db=await openDB();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction('photos','readonly');
+    const req=tx.objectStore('photos').openCursor();
+    const out={};
+    req.onsuccess=()=>{
+      const cur=req.result;
+      if(cur){ out[cur.key]=cur.value; cur.continue(); }
+      else resolve(out);
+    };
+    req.onerror=()=>reject(req.error);
+  });
+}
+function resizeImageToJpeg(file, maxDim=800, quality=0.82){
+  return new Promise((resolve,reject)=>{
+    const url=URL.createObjectURL(file);
+    const img=new Image();
+    img.onload=()=>{
+      let w=img.width, h=img.height;
+      const scale=Math.min(1, maxDim/Math.max(w,h));
+      w=Math.round(w*scale); h=Math.round(h*scale);
+      const canvas=document.createElement('canvas');
+      canvas.width=w; canvas.height=h;
+      const ctx=canvas.getContext('2d');
+      ctx.drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror=()=>{ URL.revokeObjectURL(url); reject(new Error('Could not read photo')); };
+    img.src=url;
+  });
+}
+
+function networkKey(network){
+  const n=(network||'').toLowerCase();
+  if(n.includes('circuit')) return 'circuit';
+  if(n.includes('flo')) return 'flo';
+  if(n.includes('tesla')) return 'tesla';
+  if(n.includes('chargepoint')||n.includes('charge point')) return 'chargepoint';
+  if(n.includes('electrify')) return 'electrify';
+  if(n.includes('petro')) return 'petro';
+  if(n.includes('ivy')) return 'ivy';
+  if(n.includes('circle')||n.includes('couche')) return 'circlek';
+  if(n.includes('shell')) return 'shell';
+  if(n.includes('ev connect')||n.includes('evconnect')) return 'evconnect';
+  if(n.includes('jule')) return 'jule';
+  if(n.includes('swtch')) return 'swtch';
+  if(n.includes('irving')) return 'irving';
+  return null;
+}
+function monogramFor(network){
+  const n=(network||'').trim();
+  if(!n||/unknown/i.test(n)) return 'EV';
+  const key=networkKey(n);
+  const map={circuit:'CE',flo:'FLO',tesla:'T',chargepoint:'CP',electrify:'EC',petro:'PC',ivy:'IVY',circlek:'CK',shell:'SH',evconnect:'EVC',jule:'JUL',swtch:'SW',irving:'IR'};
+  if(key&&map[key]) return map[key];
+  const parts=n.replace(/[()]/g,'').split(/\s+/).filter(Boolean);
+  if(parts.length===1) return parts[0].slice(0,3).toUpperCase();
+  return (parts[0][0]+(parts[1]?.[0]||'')).toUpperCase();
+}
+function logoHtml(network, colorName, withNote){
+  const tint=COLORS[colorName]||COLORS.blue;
+  const key=networkKey(network);
+  const mask=key && LOGO_MASKS[key];
+  const note=withNote?'<span class="note-dot" title="Has notes"></span>':'';
+  if(mask) return `<div class="badge">${note}<div class="logo" style="--tint:${tint};background-color:${tint};-webkit-mask-image:url('${mask}');mask-image:url('${mask}');"></div></div>`;
+  return `<div class="badge">${note}<span class="mono" style="--tint:${tint};color:${tint}">${escapeHtml(monogramFor(network))}</span></div>`;
+}
+function pinIcon(network, colorName, withNote){
+  const cacheKey=(networkKey(network)||monogramFor(network))+'|'+colorName+'|'+(withNote?1:0);
+  if(iconCache.has(cacheKey)) return iconCache.get(cacheKey);
+  const icon=L.divIcon({className:'marker-wrap', html:logoHtml(network,colorName,withNote), iconSize:[34,34], iconAnchor:[17,17], popupAnchor:[0,-16]});
+  iconCache.set(cacheKey, icon);
+  return icon;
+}
+
+function haversineM(aLat,aLon,bLat,bLon){
+  const R=6371000, toR=d=>d*Math.PI/180;
+  const dLat=toR(bLat-aLat), dLon=toR(bLon-aLon);
+  const x=Math.sin(dLat/2)**2+Math.cos(toR(aLat))*Math.cos(toR(bLat))*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(x));
+}
+function normName(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/\b(brcc|the|a|an)\b/g,'').replace(/\s+/g,' ').trim(); }
+function normAddr(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim(); }
+function nameSimilar(a,b){
+  const na=normName(a), nb=normName(b);
+  if(!na||!nb) return false;
+  if(na===nb) return true;
+  if(na.length>=8&&nb.length>=8&&(na.includes(nb)||nb.includes(na))) return true;
+  const ta=new Set(na.split(' ')), tb=new Set(nb.split(' '));
+  let inter=0; for(const t of ta) if(tb.has(t)) inter++;
+  return inter/new Set([...ta,...tb]).size>=0.75;
+}
+function completeness(s){ return (s.address||'').length+(s.city?10:0)+(s.network&&!/unknown/i.test(s.network)?5:0); }
+function shouldMerge(a,b){
+  if(haversineM(a.lat,a.lon,b.lat,b.lon)>50) return false;
+  const na=(a.network||'').trim().toLowerCase(), nb=(b.network||'').trim().toLowerCase();
+  const sameNet=!na||!nb||na===nb||/unknown/.test(na)||/unknown/.test(nb);
+  const similar=nameSimilar(a.name,b.name);
+  const sameA=normAddr(a.address)&&normAddr(a.address)===normAddr(b.address);
+  if(!(similar||sameA)) return false;
+  if(!sameNet&&!similar) return false;
+  return true;
+}
+function dedupeStations(list){
+  const n=list.length, parent=Array.from({length:n},(_,i)=>i);
+  const find=i=>{ while(parent[i]!==i){ parent[i]=parent[parent[i]]; i=parent[i]; } return i; };
+  const uni=(i,j)=>{ const ri=find(i), rj=find(j); if(ri!==rj) parent[rj]=ri; };
+  const CELL=0.0005, grid=new Map(), key=(gi,gj)=>gi+','+gj;
+  list.forEach((s,i)=>{ const gi=Math.floor(s.lat/CELL), gj=Math.floor(s.lon/CELL); const k=key(gi,gj); if(!grid.has(k)) grid.set(k,[]); grid.get(k).push(i); });
+  list.forEach((s,i)=>{
+    const gi=Math.floor(s.lat/CELL), gj=Math.floor(s.lon/CELL);
+    for(let di=-1;di<=1;di++) for(let dj=-1;dj<=1;dj++){
+      for(const j of (grid.get(key(gi+di,gj+dj))||[])){ if(j<=i) continue; if(shouldMerge(list[i],list[j])) uni(i,j); }
+    }
+  });
+  const clusters=new Map();
+  for(let i=0;i<n;i++){ const r=find(i); if(!clusters.has(r)) clusters.set(r,[]); clusters.get(r).push(i); }
+  const out=[];
+  for(const idxs of clusters.values()){
+    const group=idxs.map(i=>list[i]).sort((a,b)=>{
+      const ma=String(a.id).match(/(\d+)/), mb=String(b.id).match(/(\d+)/);
+      return ((ma?+ma[1]:1e15)-(mb?+mb[1]:1e15))||String(a.id).localeCompare(String(b.id));
+    });
+    const keep=Object.assign({}, group[0]); keep._mergedIds=[keep.id];
+    for(let k=1;k<group.length;k++){
+      const other=group[k];
+      keep.kw=Math.max(+keep.kw||0,+other.kw||0);
+      keep.ports=Math.max(+keep.ports||0,+other.ports||0);
+      if(completeness(other)>completeness(keep)){ keep.address=other.address||keep.address; keep.city=other.city||keep.city; keep.name=other.name||keep.name; }
+      if((!keep.network||/unknown/i.test(keep.network))&&other.network) keep.network=other.network;
+      for(const mid of (other._mergedIds||[other.id])) if(!keep._mergedIds.includes(mid)) keep._mergedIds.push(mid);
+    }
+    out.push(keep);
+  }
+  return out;
+}
+function migrateColorsAfterDedupe(list){
+  let changed=false;
+  for(const s of list){
+    const ids=s._mergedIds||[s.id];
+    let chosen=null;
+    for(const id of ids){ const c=colors[id]; if(c==='green'||c==='yellow'){ chosen=c; break; } }
+    if(!chosen) continue;
+    if(colors[s.id]!==chosen){ colors[s.id]=chosen; changed=true; }
+    for(const id of ids){ if(id!==s.id && colors[id]){ delete colors[id]; changed=true; } }
+  }
+  if(changed) saveColors();
+}
+
+function popupHtml(s){
+  const col=getColor(s.id);
+  const lat=Number(s.lat), lon=Number(s.lon);
+  const streetView=`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lon}`;
+  const directions=`https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
+  const mapsPlace=`https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+  const det=detourById.get(s.id);
+  const detourLine=det?`<p class="popup-detour">+${Math.round(det.addedSec/60)} min detour · ${formatKm(det.alongM)} into trip</p>`:'';
+  const tr=trailerInfo(s.id);
+  let rangeLine='';
+  if(det && det.arrivalPct!=null){
+    const rf=rangeFlagForPct(det.arrivalPct);
+    rangeLine=`<p class="popup-range ${rf.cls}">${escapeHtml(rf.label)}</p>`;
+  }
+  const noteText=(notes[s.id]&&notes[s.id].text)||'';
+  return `
+    <div class="popup-title">${escapeHtml(s.name)}</div>
+    <a class="popup-address" href="${escapeHtml(mapsPlace)}" target="_blank" rel="noopener noreferrer" data-copy-address="${escapeHtml(s.address)}">${escapeHtml(s.address||(lat+', '+lon))}</a>
+    <p class="popup-meta"><strong>Where:</strong> ${escapeHtml(s.city||"")} ${escapeHtml(s.prov||"")} ${escapeHtml(s.country||"")}</p>
+    <p class="popup-meta"><strong>Network:</strong> ${escapeHtml(s.network)}</p>
+    <p class="popup-meta"><strong>Max power:</strong> ${escapeHtml(s.kw)} kW</p>
+    <p class="popup-meta"><strong>DC ports:</strong> ${escapeHtml(s.ports)}</p>
+    <p class="popup-trailer ${tr.cls}">${escapeHtml(tr.text)}</p>
+    ${rangeLine}${detourLine}
+    <div class="popup-links">
+      <a class="streetview" href="${escapeHtml(streetView)}" target="_blank" rel="noopener noreferrer">Street View</a>
+      <a class="directions" href="${escapeHtml(directions)}" target="_blank" rel="noopener noreferrer">Directions</a>
+    </div>
+    <div class="popup-actions">
+      <button type="button" class="color-blue" data-set-color="blue" data-id="${escapeHtml(s.id)}">Blue = regular${col==='blue'?' (current)':''}</button>
+      <button type="button" class="color-yellow" data-set-color="yellow" data-id="${escapeHtml(s.id)}">Yellow = fits trailer${col==='yellow'?' (current)':''}</button>
+      <button type="button" class="color-green" data-set-color="green" data-id="${escapeHtml(s.id)}">Green = trailer charger${col==='green'?' (current)':''}</button>
+    </div>
+    <div class="notes-box">
+      <label for="note-${escapeHtml(s.id)}">My notes</label>
+      <textarea id="note-${escapeHtml(s.id)}" data-note-id="${escapeHtml(s.id)}" placeholder="e.g. pull-through stall 3, tight turn">${escapeHtml(noteText)}</textarea>
+      <div class="photo-row">
+        <input type="file" accept="image/*" data-photo-id="${escapeHtml(s.id)}" capture="environment">
+        <button type="button" data-photo-clear="${escapeHtml(s.id)}">Remove photo</button>
+      </div>
+      <div data-photo-preview="${escapeHtml(s.id)}"></div>
+    </div>`;
+}
+async function fillPopupPhoto(id){
+  try{
+    const ph=await idbGetPhoto(id);
+    const box=document.querySelector(`[data-photo-preview="${CSS.escape(id)}"]`);
+    if(!box) return;
+    box.innerHTML=ph?`<img alt="Stall photo" src="${ph}">`:'';
+  }catch(_){}
+}
+function visibleColor(c){ const el=document.getElementById('f-'+c); return !el||el.checked; }
+function visibleCountry(code){
+  const el=document.getElementById('f-country');
+  const v=el?el.value:'all';
+  return v==='all'||v===code;
+}
+function updateCounts(){
+  const tallies={blue:0,yellow:0,green:0};
+  for(const s of STATIONS) tallies[getColor(s.id)]++;
+  const shown=[...markerById.values()].filter(m=>markersLayer.hasLayer(m)).length;
+  document.getElementById('counts').textContent=` · Showing ${shown} of ${STATIONS.length} · Blue ${tallies.blue} · Yellow ${tallies.yellow} · Green ${tallies.green}`;
+  if(!routeState){
+    const ca=STATIONS.filter(s=>s.country==='CA').length, us=STATIONS.filter(s=>s.country==='US').length;
+    const listed=STATIONS.filter(s=>s.trailerFriendly&&colors[s.id]!=='blue'&&colors[s.id]!=='yellow').length;
+    document.getElementById('status').textContent=`${STATIONS.length} stations · CA ${ca} · US ${us} · ${listed} listed trailer-friendly · snapshot ${META.fetched||''}`;
+  }
+}
+function applyFilters(){
+  for(const s of STATIONS){
+    const m=markerById.get(s.id); if(!m) continue;
+    const col=getColor(s.id), show=visibleColor(col)&&visibleCountry(s.country);
+    if(show){ if(!markersLayer.hasLayer(m)) m.addTo(markersLayer); }
+    else if(markersLayer.hasLayer(m)) markersLayer.removeLayer(m);
+  }
+  updateCounts(); renderDetourList();
+}
+function recolourMarker(id){
+  const m=markerById.get(id), s=STATIONS.find(x=>x.id===id);
+  if(!m||!s) return;
+  m.setIcon(pinIcon(s.network, getColor(id), hasNote(id)));
+  m.setPopupContent(popupHtml(s));
+  applyFilters();
+}
+function buildMarkers(){
+  markersLayer.clearLayers(); markerById.clear(); iconCache.clear();
+  for(const s of STATIONS){
+    const col=getColor(s.id);
+    const m=L.marker([s.lat,s.lon],{icon:pinIcon(s.network,col,hasNote(s.id)), title:s.name});
+    m.bindPopup(()=>popupHtml(s),{maxWidth:340, autoPanPadding:[40,40]});
+    m.on('popupopen', ()=>fillPopupPhoto(s.id));
+    markerById.set(s.id,m);
+    if(visibleColor(col)&&visibleCountry(s.country)) m.addTo(markersLayer);
+  }
+  updateCounts();
+}
+function openModal(title, bodyHtml){
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-body').innerHTML=bodyHtml;
+  document.getElementById('modal-backdrop').classList.add('open');
+  document.getElementById('modal-backdrop').setAttribute('aria-hidden','false');
+}
+function closeModal(){
+  document.getElementById('modal-backdrop').classList.remove('open');
+  document.getElementById('modal-backdrop').setAttribute('aria-hidden','true');
+}
+function showCopyToast(msg){
+  const t=document.getElementById('copy-toast'); if(!t) return;
+  t.textContent=msg||'Address copied'; t.classList.add('show');
+  clearTimeout(showCopyToast._timer); showCopyToast._timer=setTimeout(()=>t.classList.remove('show'),1600);
+}
+function setPickBanner(text){
+  const b=document.getElementById('pick-banner');
+  if(!text){ b.classList.remove('show'); b.textContent=''; return; }
+  b.textContent=text; b.classList.add('show');
+}
+function fillSettingsForm(){
+  document.getElementById('set-kwh').value=settings.usableKwh;
+  document.getElementById('set-pct').value=settings.batteryPct;
+  document.getElementById('set-cons').value=settings.consNoTrailer;
+  document.getElementById('set-cons-tow').value=settings.consTrailer;
+  document.getElementById('set-reserve').value=settings.reservePct;
+  document.getElementById('set-towing').checked=!!settings.towing;
+}
+function readSettingsForm(){
+  settings={
+    usableKwh:Number(document.getElementById('set-kwh').value)||75,
+    batteryPct:Number(document.getElementById('set-pct').value)||90,
+    consNoTrailer:Number(document.getElementById('set-cons').value)||19,
+    consTrailer:Number(document.getElementById('set-cons-tow').value)||35,
+    reservePct:Number(document.getElementById('set-reserve').value)||10,
+    towing:document.getElementById('set-towing').checked
+  };
+  saveSettings();
+}
+
+function initMap(){
+  map=L.map('map',{zoomControl:true}).setView([48,-96],4);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19, attribution:'&copy; OpenStreetMap · Open Charge Map · OSRM'}).addTo(map);
+  markersLayer=L.markerClusterGroup({showCoverageOnHover:false, maxClusterRadius:60, spiderfyOnMaxZoom:true, disableClusteringAtZoom:12, chunkedLoading:true});
+  map.addLayer(markersLayer);
+  buildMarkers();
+  if(STATIONS.length) map.fitBounds(L.latLngBounds(STATIONS.map(s=>[s.lat,s.lon])).pad(0.05));
+  map.on('click',(e)=>{
+    if(pickMode!=='start') return;
+    pickMode=null; setPickBanner('');
+    const start={lat:e.latlng.lat, lon:e.latlng.lng, label:'Map pin'};
+    if(pendingDest) routeFromTo(start, pendingDest);
+  });
+}
+
+function toRad(d){ return d*Math.PI/180; }
+function nearestOnRoute(lat, lon, coordsLngLat){
+  let best={distM:Infinity, alongM:0}; let along=0;
+  for(let i=0;i<coordsLngLat.length-1;i++){
+    const [aLon,aLat]=coordsLngLat[i], [bLon,bLat]=coordsLngLat[i+1];
+    const segLen=haversineM(aLat,aLon,bLat,bLon);
+    const lat0=toRad((aLat+bLat+lat)/3);
+    const xP=toRad(lon-aLon)*Math.cos(lat0), yP=toRad(lat-aLat);
+    const xB=toRad(bLon-aLon)*Math.cos(lat0), yB=toRad(bLat-aLat);
+    const len2=xB*xB+yB*yB; let t=len2===0?0:(xP*xB+yP*yB)/len2; t=Math.max(0,Math.min(1,t));
+    const nLat=aLat+(bLat-aLat)*t, nLon=aLon+(bLon-aLon)*t;
+    const d=haversineM(lat,lon,nLat,nLon);
+    if(d<best.distM) best={distM:d, alongM:along+segLen*t};
+    along+=segLen;
+  }
+  return best;
+}
+function pointAlongRoute(coordsLngLat, targetM){
+  let along=0;
+  for(let i=0;i<coordsLngLat.length-1;i++){
+    const [aLon,aLat]=coordsLngLat[i], [bLon,bLat]=coordsLngLat[i+1];
+    const seg=haversineM(aLat,aLon,bLat,bLon);
+    if(along+seg>=targetM){
+      const t=seg===0?0:(targetM-along)/seg;
+      return {lat:aLat+(bLat-aLat)*t, lon:aLon+(bLon-aLon)*t};
+    }
+    along+=seg;
+  }
+  const last=coordsLngLat[coordsLngLat.length-1];
+  return {lat:last[1], lon:last[0]};
+}
+async function geocode(query){
+  const res=await fetch(NOMINATIM+'?format=json&limit=1&q='+encodeURIComponent(query),{headers:{'Accept':'application/json'}});
+  if(!res.ok) throw new Error('Address lookup failed ('+res.status+')');
+  const data=await res.json();
+  if(!data||!data.length) throw new Error('No match for that address');
+  return {lat:+data[0].lat, lon:+data[0].lon, label:data[0].display_name};
+}
+function getCurrentPosition(){
+  return new Promise((resolve,reject)=>{
+    if(!navigator.geolocation){ reject(new Error('Geolocation is not available on this device.')); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos=>resolve({lat:pos.coords.latitude, lon:pos.coords.longitude, label:'My location'}),
+      err=>reject(err),
+      {enableHighAccuracy:true, timeout:15000, maximumAge:60000}
+    );
+  });
+}
+async function fetchOsrmRoute(start,end){
+  const url=`${OSRM}/route/v1/driving/${start.lon},${start.lat};${end.lon},${end.lat}?overview=full&geometries=geojson`;
+  const res=await fetch(url); if(!res.ok) throw new Error('Routing server returned '+res.status);
+  const data=await res.json();
+  if(data.code!=='Ok'||!data.routes?.[0]) throw new Error(data.message||'No driving route found');
+  const r=data.routes[0]; return {duration:r.duration, distance:r.distance, geometry:r.geometry};
+}
+async function fetchOsrmTable(coords, sources, destinations){
+  const path=coords.map(c=>`${c.lon},${c.lat}`).join(';');
+  const url=`${OSRM}/table/v1/driving/${path}?sources=${sources.join(';')}&destinations=${destinations.join(';')}&annotations=duration,distance`;
+  const res=await fetch(url); if(!res.ok) throw new Error('Travel-time table failed ('+res.status+')');
+  const data=await res.json(); if(data.code!=='Ok') throw new Error(data.message||'Travel-time table error');
+  return data;
+}
+function clearRoute(){
+  if(routeLayer){map.removeLayer(routeLayer); routeLayer=null;}
+  if(startMarker){map.removeLayer(startMarker); startMarker=null;}
+  if(endMarker){map.removeLayer(endMarker); endMarker=null;}
+  if(rangeMarker){map.removeLayer(rangeMarker); rangeMarker=null;}
+  routeState=null; detourById.clear(); pickMode=null; pendingDest=null; setPickBanner('');
+  document.getElementById('route-summary').classList.remove('show');
+  document.getElementById('route-summary').innerHTML='';
+  document.getElementById('btn-clear-route').disabled=true;
+  const g=document.getElementById('btn-google-dir'); g.style.display='none'; g.removeAttribute('href');
+  document.getElementById('detour-panel').classList.remove('show');
+  document.getElementById('detour-list').innerHTML='';
+  document.getElementById('detour-loading').style.display='none';
+  document.getElementById('detour-error').style.display='none';
+  document.getElementById('detour-status').textContent='';
+  document.getElementById('range-status').textContent='';
+  updateCounts();
+}
+function updateRangeMarker(){
+  if(rangeMarker){ map.removeLayer(rangeMarker); rangeMarker=null; }
+  if(!routeState) return;
+  const emptyKm=rangeToEmptyKm();
+  const emptyM=emptyKm*1000;
+  if(emptyM<=0) return;
+  if(emptyM >= routeState.directM) return; // can finish route without emptying
+  const pt=pointAlongRoute(routeState.geometry.coordinates, emptyM);
+  rangeMarker=L.circleMarker([pt.lat,pt.lon],{
+    radius:10, color:'#111', weight:2, fillColor:'#e85d5d', fillOpacity:0.95
+  }).addTo(map).bindPopup(`Range runs out here (~${emptyKm.toFixed(0)} km) at ${consumption()} kWh/100 km`);
+}
+function showRouteOnMap(start,end,geometry,directSec,directM){
+  if(routeLayer) map.removeLayer(routeLayer);
+  if(startMarker) map.removeLayer(startMarker);
+  if(endMarker) map.removeLayer(endMarker);
+  const latlngs=geometry.coordinates.map(([lng,lat])=>[lat,lng]);
+  routeLayer=L.polyline(latlngs,{color:'#5eb1ff', weight:7, opacity:0.85}).addTo(map);
+  startMarker=L.circleMarker([start.lat,start.lon],{radius:9,color:'#fff',weight:2,fillColor:'#ff5a36',fillOpacity:0.95}).addTo(map).bindPopup('Start: '+escapeHtml(start.label||'Start'));
+  endMarker=L.circleMarker([end.lat,end.lon],{radius:9,color:'#fff',weight:2,fillColor:'#7CFC00',fillOpacity:0.95}).addTo(map).bindPopup('Destination: '+escapeHtml(end.label||'Destination'));
+  map.fitBounds(routeLayer.getBounds().pad(0.12));
+  const destPct=arrivalPctAtKm(directM/1000);
+  const destFlag=rangeFlagForPct(destPct);
+  const sum=document.getElementById('route-summary');
+  sum.innerHTML=`${formatKm(directM)} · ${formatMin(directSec)} · Dest ${Math.round(destPct)}% (${escapeHtml(destFlag.short)})
+    <span class="muted"> · Reachable ~${rangeToReserveKm().toFixed(0)} km to reserve / ~${rangeToEmptyKm().toFixed(0)} km to empty · ${settings.towing?'Towing':'No trailer'} · ${consumption()} kWh/100 km</span>
+    <span class="muted"> · ${escapeHtml(start.label||'Start')} → ${escapeHtml(end.label||'Destination')}</span>`;
+  sum.classList.add('show');
+  document.getElementById('btn-clear-route').disabled=false;
+  const g=document.getElementById('btn-google-dir');
+  g.href=`https://www.google.com/maps/dir/?api=1&origin=${start.lat},${start.lon}&destination=${end.lat},${end.lon}`;
+  g.style.display='inline-flex';
+  updateRangeMarker();
+}
+function stationsNearRoute(geometry, corridorKm){
+  const coords=geometry.coordinates, maxM=corridorKm*1000, out=[];
+  for(const s of STATIONS){
+    const n=nearestOnRoute(s.lat,s.lon,coords);
+    if(n.distM<=maxM) out.push({station:s, distToRouteM:n.distM, alongM:n.alongM});
+  }
+  return out;
+}
+async function computeDetours(start,end,directSec,nearList){
+  const BATCH=90, results=[];
+  for(let i=0;i<nearList.length;i+=BATCH){
+    const chunk=nearList.slice(i,i+BATCH);
+    const coords=[{lon:start.lon,lat:start.lat},{lon:end.lon,lat:end.lat}].concat(chunk.map(c=>({lon:c.station.lon,lat:c.station.lat})));
+    const chargerIdx=chunk.map((_,j)=>j+2);
+    const t1=await fetchOsrmTable(coords,[0],chargerIdx);
+    const t2=await fetchOsrmTable(coords,chargerIdx,[1]);
+    for(let j=0;j<chunk.length;j++){
+      const toCharger=t1.durations[0][j], fromCharger=t2.durations[j][0];
+      const toDist=(t1.distances && t1.distances[0]) ? t1.distances[0][j] : null;
+      if(toCharger==null||fromCharger==null) continue;
+      const via=toCharger+fromCharger;
+      const distKm=(toDist!=null?toDist:chunk[j].alongM)/1000;
+      const arrivalPct=arrivalPctAtKm(distKm);
+      results.push({
+        ...chunk[j],
+        toChargerSec:toCharger, fromChargerSec:fromCharger, viaSec:via,
+        addedSec:Math.max(0, via-directSec),
+        toChargerM: toDist!=null?toDist:chunk[j].alongM,
+        arrivalPct
+      });
+    }
+  }
+  results.sort((a,b)=>a.addedSec-b.addedSec||a.alongM-b.alongM);
+  return results;
+}
+function renderDetourList(){
+  const list=document.getElementById('detour-list');
+  if(!routeState||!routeState.detours){ list.innerHTML=''; return; }
+  const show={blue:document.getElementById('d-blue').checked, yellow:document.getElementById('d-yellow').checked, green:document.getElementById('d-green').checked};
+  const trailerOnly=document.getElementById('d-trailer-ok').checked;
+  const reachableOnly=document.getElementById('d-reachable-only').checked;
+  const filtered=routeState.detours.filter(d=>{
+    const col=getColor(d.station.id);
+    if(!show[col]) return false;
+    if(trailerOnly && col==='blue') return false;
+    const rf=rangeFlagForPct(d.arrivalPct);
+    if(reachableOnly && rf.cls==='oor') return false;
+    return true;
+  });
+  document.getElementById('detour-status').textContent=`${filtered.length} of ${routeState.detours.length} within ${routeState.corridorKm} km · sorted by least added time`;
+  const destPct=arrivalPctAtKm(routeState.directM/1000);
+  const destFlag=rangeFlagForPct(destPct);
+  document.getElementById('range-status').textContent=
+    `Battery plan: start ${settings.batteryPct}% · ${consumption()} kWh/100 km · dest ~${Math.round(destPct)}% (${destFlag.short}) · empty in ~${rangeToEmptyKm().toFixed(0)} km`;
+  list.innerHTML=filtered.map(d=>{
+    const col=getColor(d.station.id); const tr=trailerInfo(d.station.id);
+    const rf=rangeFlagForPct(d.arrivalPct);
+    const addMin=Math.round(d.addedSec/60);
+    const note=noteFirstLine(d.station.id);
+    return `<li data-station-id="${escapeHtml(d.station.id)}">
+      <div class="row1"><span class="dot ${col}"></span><span>${escapeHtml(d.station.name)}</span><span class="added">+${addMin} min</span></div>
+      <div class="row2">${escapeHtml(d.station.kw)} kW · ${formatKm(d.alongM)} into trip · ${escapeHtml(d.station.network)}</div>
+      <div class="range-flag ${rf.cls}">${escapeHtml(rf.short)}</div>
+      <div class="trailer ${tr.cls}">${escapeHtml(tr.text)}</div>
+      ${note?`<div class="note-line">Note: ${escapeHtml(note)}</div>`:''}
+      <div class="row2">${escapeHtml(d.station.address)}</div>
+    </li>`;
+  }).join('');
+}
+async function analyzeRouteChargers(){
+  if(!routeState) return;
+  const panel=document.getElementById('detour-panel');
+  const loading=document.getElementById('detour-loading');
+  const err=document.getElementById('detour-error');
+  panel.classList.add('show'); loading.style.display='block'; err.style.display='none'; err.textContent='';
+  document.getElementById('detour-list').innerHTML='';
+  document.getElementById('detour-status').textContent='Finding chargers near the route…';
+  try{
+    const corridorKm=Number(document.getElementById('corridor-km').value)||5;
+    const near=stationsNearRoute(routeState.geometry, corridorKm);
+    document.getElementById('detour-status').textContent=`Found ${near.length} chargers within ${corridorKm} km — computing detours…`;
+    const detours=await computeDetours(routeState.start, routeState.end, routeState.directSec, near);
+    routeState.detours=detours; routeState.corridorKm=corridorKm;
+    detourById.clear(); for(const d of detours) detourById.set(d.station.id,d);
+    loading.style.display='none'; renderDetourList(); updateRangeMarker();
+  }catch(e){
+    loading.style.display='none'; err.style.display='block';
+    err.textContent='Could not compute detours: '+(e.message||e)+'. You can still use Google Directions.';
+  }
+}
+async function routeFromTo(start,end){
+  document.getElementById('status').textContent='Getting driving route…';
+  document.getElementById('btn-route').disabled=true;
+  try{
+    const r=await fetchOsrmRoute(start,end);
+    routeState={start,end,directSec:r.duration,directM:r.distance,geometry:r.geometry,detours:[],corridorKm:Number(document.getElementById('corridor-km').value)||5};
+    showRouteOnMap(start,end,r.geometry,r.duration,r.distance);
+    document.getElementById('status').textContent=`Route ready · ${formatKm(r.distance)} · ${formatMin(r.duration)}`;
+    await analyzeRouteChargers();
+  }catch(e){
+    openModal('Routing',`<p>${escapeHtml(e.message||String(e))}</p>`);
+    document.getElementById('status').textContent='Routing failed';
+  }finally{ document.getElementById('btn-route').disabled=false; }
+}
+function askForStart(dest){
+  pendingDest=dest;
+  openModal('Starting point needed',`
+    <p>Location permission is off or unavailable, so the route needs a starting point.</p>
+    <p><strong>Option 1:</strong> type a start address</p>
+    <input type="text" id="start-input" placeholder="e.g. Disraeli, QC">
+    <button type="button" class="primary" id="do-start-address">Use this start address</button>
+    <p style="margin-top:0.85rem"><strong>Option 2:</strong> tap the map to drop a start pin</p>
+    <button type="button" id="do-start-tap">I will tap the map</button>
+    <p class="popup-meta" id="start-msg"></p>`);
+  document.getElementById('do-start-address').onclick=async()=>{
+    const q=document.getElementById('start-input').value.trim(); const msg=document.getElementById('start-msg');
+    if(!q){ msg.textContent='Enter a start address first.'; return; }
+    msg.textContent='Looking up start…';
+    try{ const start=await geocode(q); closeModal(); await routeFromTo(start,dest); }
+    catch(e){ msg.textContent=e.message||String(e); }
+  };
+  document.getElementById('do-start-tap').onclick=()=>{ closeModal(); pickMode='start'; setPickBanner('Tap the map to set your starting point'); };
+}
+async function startRouteFlow(){
+  const q=document.getElementById('dest-input').value.trim();
+  if(!q){ openModal('Search','<p>Type a destination address, then tap Route.</p>'); return; }
+  document.getElementById('btn-route').disabled=true;
+  document.getElementById('status').textContent='Looking up destination…';
+  try{
+    const dest=await geocode(q);
+    let start;
+    try{ start=await getCurrentPosition(); }
+    catch{ document.getElementById('btn-route').disabled=false; askForStart(dest); return; }
+    await routeFromTo(start,dest);
+  }catch(e){
+    openModal('Search',`<p>${escapeHtml(e.message||String(e))}</p>`);
+    document.getElementById('status').textContent='Search failed';
+  }finally{ document.getElementById('btn-route').disabled=false; }
+}
+
+document.addEventListener('click', async (e)=>{
+  const row=e.target.closest('#detour-list li[data-station-id]');
+  if(row){
+    const id=row.getAttribute('data-station-id');
+    const s=STATIONS.find(x=>x.id===id); const m=markerById.get(id);
+    if(s&&m){
+      if(!visibleColor(getColor(id))){ document.getElementById('f-'+getColor(id)).checked=true; applyFilters(); }
+      map.setView([s.lat,s.lon],14); m.openPopup();
+    }
+    return;
+  }
+  const clearPhoto=e.target.closest('[data-photo-clear]');
+  if(clearPhoto){
+    const id=clearPhoto.getAttribute('data-photo-clear');
+    await idbDeletePhoto(id);
+    if(notes[id]){ notes[id].hasPhoto=false; if(!(notes[id].text||'').trim()) delete notes[id]; saveNotes(); }
+    const box=document.querySelector(`[data-photo-preview="${CSS.escape(id)}"]`);
+    if(box) box.innerHTML='';
+    recolourMarker(id);
+    renderDetourList();
+    return;
+  }
+  const addr=e.target.closest('[data-copy-address]');
+  if(addr){
+    if(!(e.metaKey||e.ctrlKey||e.shiftKey||e.button===1)){
+      e.preventDefault();
+      const text=addr.getAttribute('data-copy-address')||addr.textContent||'';
+      const openMaps=()=>window.open(addr.href,'_blank','noopener,noreferrer');
+      const done=()=>showCopyToast('Address copied — tap Street View or Directions for Maps');
+      if(navigator.clipboard?.writeText){ navigator.clipboard.writeText(text).then(done).catch(()=>{ try{ const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done(); }catch{ openMaps(); } }); }
+      else openMaps();
+      return;
+    }
+  }
+  const btn=e.target.closest('[data-set-color]');
+  if(!btn) return;
+  const id=btn.getAttribute('data-id'); const col=btn.getAttribute('data-set-color');
+  if(!id||!COLORS[col]) return;
+  colors[id]=col;
+  saveColors(); recolourMarker(id);
+});
+
+document.addEventListener('change', async (e)=>{
+  const photoInput=e.target.closest('input[data-photo-id]');
+  if(photoInput && photoInput.files && photoInput.files[0]){
+    const id=photoInput.getAttribute('data-photo-id');
+    try{
+      const dataUrl=await resizeImageToJpeg(photoInput.files[0], 800, 0.82);
+      await idbSetPhoto(id, dataUrl);
+      notes[id]=Object.assign({}, notes[id]||{}, {hasPhoto:true, text:(notes[id]&&notes[id].text)||''});
+      saveNotes();
+      const box=document.querySelector(`[data-photo-preview="${CSS.escape(id)}"]`);
+      if(box) box.innerHTML=`<img alt="Stall photo" src="${dataUrl}">`;
+      recolourMarker(id); renderDetourList();
+    }catch(err){ openModal('Photo', `<p>${escapeHtml(err.message||String(err))}</p>`); }
+    photoInput.value='';
+  }
+});
+document.addEventListener('input', (e)=>{
+  const ta=e.target.closest('textarea[data-note-id]');
+  if(!ta) return;
+  const id=ta.getAttribute('data-note-id');
+  const text=ta.value;
+  const prev=notes[id]||{};
+  if(!text.trim() && !prev.hasPhoto){ delete notes[id]; }
+  else notes[id]={ text, hasPhoto:!!prev.hasPhoto };
+  saveNotes();
+  clearTimeout(document._noteIconTimer);
+  document._noteIconTimer=setTimeout(()=>{ recolourMarker(id); renderDetourList(); }, 250);
+});
+
+['f-blue','f-yellow','f-green'].forEach(id=>document.getElementById(id).addEventListener('change', applyFilters));
+document.getElementById('f-country').addEventListener('change', applyFilters);
+['d-blue','d-yellow','d-green','d-trailer-ok','d-reachable-only'].forEach(id=>document.getElementById(id).addEventListener('change', renderDetourList));
+document.getElementById('btn-a-plus').onclick=()=>setFont(fontPx+2);
+document.getElementById('btn-a-minus').onclick=()=>setFont(fontPx-2);
+document.getElementById('modal-close').onclick=closeModal;
+document.getElementById('modal-backdrop').addEventListener('click',e=>{ if(e.target.id==='modal-backdrop') closeModal(); });
+document.getElementById('btn-settings').onclick=()=>{ fillSettingsForm(); document.getElementById('settings').classList.add('open'); };
+document.getElementById('btn-settings-close').onclick=()=>document.getElementById('settings').classList.remove('open');
+document.getElementById('btn-settings-save').onclick=()=>{
+  readSettingsForm();
+  document.getElementById('settings').classList.remove('open');
+  if(routeState){
+    // recompute arrival flags with new settings using existing distances
+    for(const d of routeState.detours||[]){
+      d.arrivalPct=arrivalPctAtKm((d.toChargerM!=null?d.toChargerM:d.alongM)/1000);
+    }
+    showRouteOnMap(routeState.start, routeState.end, routeState.geometry, routeState.directSec, routeState.directM);
+    renderDetourList();
+  }
+  showCopyToast('Range settings saved');
+};
+document.getElementById('btn-locate').onclick=()=>{
+  if(!navigator.geolocation){ openModal('Locate me','<p>Geolocation is not available in this browser.</p>'); return; }
+  document.getElementById('status').textContent='Finding your location…';
+  navigator.geolocation.getCurrentPosition(pos=>{
+    map.setView([pos.coords.latitude,pos.coords.longitude],11);
+    if(youMarker) map.removeLayer(youMarker);
+    youMarker=L.circleMarker([pos.coords.latitude,pos.coords.longitude],{radius:8,color:'#fff',weight:2,fillColor:'#ff5a36',fillOpacity:0.9}).addTo(map).bindPopup('You are here').openPopup();
+    updateCounts();
+  }, err=>openModal('Locate me',`<p>Could not get location: ${escapeHtml(err.message)}</p>`), {enableHighAccuracy:true, timeout:15000});
+};
+
+document.getElementById('btn-export').onclick=async()=>{
+  let photos={};
+  try{ photos=await idbAllPhotos(); }catch(_){ photos={}; }
+  const payload={
+    version:2,
+    exportedAt:new Date().toISOString(),
+    colors, notes, settings, photos
+  };
+  const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='charger-map-backup.json'; a.click(); URL.revokeObjectURL(a.href);
+};
+document.getElementById('btn-import').onclick=()=>document.getElementById('import-file').click();
+document.getElementById('import-file').onchange=async(e)=>{
+  const file=e.target.files&&e.target.files[0]; e.target.value=''; if(!file) return;
+  try{
+    const data=JSON.parse(await file.text());
+    // backward compatible: colours-only or {colors:{}}
+    const incomingColors=data.colors || (data.version?null:data) || {};
+    if(incomingColors && typeof incomingColors==='object' && !Array.isArray(incomingColors)){
+      let n=0;
+      // if looks like colour map (values blue/yellow/green) or old export
+      const vals=Object.values(incomingColors);
+      const looksLikeColors = vals.length===0 || vals.every(v=>v==='blue'||v==='yellow'||v==='green'||v==null);
+      if(data.colors || looksLikeColors){
+        for(const [id,col] of Object.entries(data.colors||incomingColors)){
+          if(col==='yellow'||col==='green'){ colors[id]=col; n++; }
+          else if(col==='blue'){ colors[id]='blue'; n++; }
+        }
+        saveColors();
+      }
+    }
+    if(data.notes && typeof data.notes==='object'){ notes=data.notes; saveNotes(); }
+    if(data.settings && typeof data.settings==='object'){ settings=Object.assign({}, DEFAULT_SETTINGS, data.settings); saveSettings(); fillSettingsForm(); }
+    if(data.photos && typeof data.photos==='object'){
+      for(const [id, dataUrl] of Object.entries(data.photos)){
+        if(typeof dataUrl==='string' && dataUrl.startsWith('data:')) await idbSetPhoto(id, dataUrl);
+      }
+    }
+    migrateColorsAfterDedupe(STATIONS);
+    buildMarkers();
+    if(routeState){ for(const d of routeState.detours||[]){ d.arrivalPct=arrivalPctAtKm((d.toChargerM!=null?d.toChargerM:d.alongM)/1000); } renderDetourList(); updateRangeMarker(); }
+    openModal('Import','<p>Import finished. Colours, notes, settings and photos were merged when present. Old colours-only files still work.</p>');
+  }catch(err){ openModal('Import',`<p>Could not import: ${escapeHtml(err.message)}</p>`); }
+};
+
+document.getElementById('btn-route').onclick=()=>startRouteFlow();
+document.getElementById('dest-input').addEventListener('keydown',e=>{ if(e.key==='Enter') startRouteFlow(); });
+document.getElementById('btn-clear-route').onclick=()=>clearRoute();
+document.getElementById('corridor-km').addEventListener('change',()=>{ if(routeState) analyzeRouteChargers(); });
+
+function replaceStations(next){
+  const deduped=dedupeStations(next);
+  STATIONS.length=0; STATIONS.push(...deduped);
+  rebuildStationIndex();
+  migrateColorsAfterDedupe(STATIONS);
+  buildMarkers();
+  return {before:next.length, after:deduped.length};
+}
+async function refreshFromOcm(apiKey){
+  const countries=['CA','US'];
+  const pois=[];
+  for(const cc of countries){
+    const url='https://api.openchargemap.io/v3/poi/?output=json&countrycode='+cc+'&maxresults=100000&compact=true&verbose=false&key='+encodeURIComponent(apiKey);
+    const res=await fetch(url); if(!res.ok) throw new Error('OCM HTTP '+res.status+' for '+cc);
+    const batch=await res.json();
+    for(const poi of batch) poi._country=cc;
+    pois.push(...batch);
+  }
+  const CA_PROV={quebec:'QC','québec':'QC',qc:'QC',ontario:'ON',on:'ON','new brunswick':'NB','new-brunswick':'NB',nb:'NB','nova scotia':'NS',ns:'NS','prince edward island':'PE',pe:'PE',pei:'PE','newfoundland and labrador':'NL',newfoundland:'NL',nl:'NL',alberta:'AB',ab:'AB','british columbia':'BC',bc:'BC',manitoba:'MB',mb:'MB',saskatchewan:'SK',sk:'SK','northwest territories':'NT',nt:'NT',nunavut:'NU',nu:'NU',yukon:'YT',yt:'YT'};
+  const US_PROV={alabama:'AL',alaska:'AK',arizona:'AZ',arkansas:'AR',california:'CA',colorado:'CO',connecticut:'CT',delaware:'DE','district of columbia':'DC',florida:'FL',georgia:'GA',hawaii:'HI',idaho:'ID',illinois:'IL',indiana:'IN',iowa:'IA',kansas:'KS',kentucky:'KY',louisiana:'LA',maine:'ME',maryland:'MD',massachusetts:'MA',michigan:'MI',minnesota:'MN',mississippi:'MS',missouri:'MO',montana:'MT',nebraska:'NE',nevada:'NV','new hampshire':'NH','new jersey':'NJ','new mexico':'NM','new york':'NY','north carolina':'NC','north dakota':'ND',ohio:'OH',oklahoma:'OK',oregon:'OR',pennsylvania:'PA','rhode island':'RI','south carolina':'SC','south dakota':'SD',tennessee:'TN',texas:'TX',utah:'UT',vermont:'VT',virginia:'VA',washington:'WA','west virginia':'WV',wisconsin:'WI',wyoming:'WY','puerto rico':'PR'};
+  const CA_CODES=new Set(['QC','ON','NB','NS','PE','NL','AB','BC','MB','SK','NT','NU','YT']);
+  const US_CODES=new Set(['AL','AK','AZ','AR','CA','CO','CT','DE','DC','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','PR','GU','VI','AS','MP']);
+  const bad=new Set([100,150,200,210]); const publicU=new Set([0,1,4,5,7]); const dcConn=new Set([2,27,30,32,33,1040]);
+  function normProv(raw, country){
+    const p=(raw||'').trim(); if(!p) return null;
+    const codes=country==='CA'?CA_CODES:US_CODES;
+    if(codes.has(p.toUpperCase())) return p.toUpperCase();
+    const key=p.toLowerCase();
+    const map=country==='CA'?CA_PROV:US_PROV;
+    return map[key]||null;
+  }
+  const next=[];
+  for(const poi of pois){
+    if(bad.has(poi.StatusTypeID)) continue;
+    if(poi.UsageTypeID!=null && !publicU.has(poi.UsageTypeID)) continue;
+    const a=poi.AddressInfo||{};
+    const country=poi._country==='US'?'US':'CA';
+    const p=normProv(a.StateOrProvince, country);
+    if(!p) continue;
+    let ports=0,maxKw=0;
+    for(const c of (poi.Connections||[])){
+      const kw=c.PowerKW||0;
+      const isDc=c.CurrentTypeID===30||c.LevelID===3||(dcConn.has(c.ConnectionTypeID)&&kw>=40);
+      if(!isDc||kw<50) continue; ports+=(c.Quantity||1); if(kw>maxKw) maxKw=kw;
+    }
+    if(!ports||maxKw<50||a.Latitude==null||a.Longitude==null) continue;
+    next.push({id:'ocm-'+poi.ID, name:a.Title||('OCM-'+poi.ID), network:String(poi.OperatorID||'Unknown'), address:[a.AddressLine1,a.Town,p,a.Postcode].filter(Boolean).join(', '), city:a.Town||'', prov:p, country, lat:+a.Latitude, lon:+a.Longitude, kw:+maxKw, ports:+ports});
+  }
+  const r=replaceStations(next);
+  document.getElementById('status').textContent=`Refreshed OCM · ${r.after} after dedupe`;
+  return r.after;
+}
+async function refreshFromCircuitElectrique(){
+  const res=await fetch('https://data.lecircuitelectrique.com/stations/export_sites_fr.csv');
+  if(!res.ok) throw new Error('Circuit électrique CSV HTTP '+res.status);
+  const text=await res.text(); const lines=text.split(/\r?\n/); const header=lines.shift();
+  function parseRow(line){ const out=[]; let cur='', q=false; for(let i=0;i<line.length;i++){ const ch=line[i]; if(ch==='"'){q=!q;continue;} if(ch===','&&!q){out.push(cur);cur='';continue;} cur+=ch;} out.push(cur); return out; }
+  const cols=parseRow(header); const idx=Object.fromEntries(cols.map((c,i)=>[c.replace(/^\uFEFF/,''),i]));
+  const parks=new Map();
+  for(const line of lines){
+    if(!line.trim()) continue; const r=parseRow(line);
+    const kw=parseFloat((r[idx['Puissance (kW)']]||'0').replace(',','.')); if(!(kw>=50)) continue;
+    const name=r[idx['Nom du parc']]||r[idx['Nom de la borne de recharge']];
+    const lat=parseFloat(r[idx['Latitude']]), lon=parseFloat(r[idx['Longitude']]);
+    if(!name||Number.isNaN(lat)||Number.isNaN(lon)) continue;
+    const id='ce-'+name.toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,80);
+    const prev=parks.get(id)||{id,name,network:'Circuit électrique',address:'',city:'',prov:'QC',lat,lon,kw:0,ports:0};
+    prev.kw=Math.max(prev.kw,kw); prev.ports+=1; prev.city=r[idx['Ville']]||prev.city;
+    prev.address=[r[idx['Rue']]||r[idx['Adresse']],prev.city,'QC',r[idx['Code Postal']]].filter(Boolean).join(', ');
+    prev.lat=lat; prev.lon=lon; parks.set(id,prev);
+  }
+  const kept=STATIONS.filter(s=>!/circuit/i.test(s.network));
+  const r=replaceStations(kept.concat([...parks.values()]));
+  document.getElementById('status').textContent=`Refreshed CE merge · ${r.after} after dedupe`;
+  return r.after;
+}
+document.getElementById('btn-refresh').onclick=()=>{
+  const saved=localStorage.getItem(OCM_KEY)||'';
+  openModal('Refresh data',`
+    <p>Loaded snapshot: <strong>${STATIONS.length}</strong> stations (Canada &amp; US, deduped).</p>
+    <p><strong>Option A</strong> — full refresh (free OCM API key)</p>
+    <input type="text" id="ocm-key" placeholder="Paste OCM API key" value="${escapeHtml(saved)}">
+    <button type="button" class="primary" id="do-ocm">Refresh from Open Charge Map</button>
+    <p style="margin-top:1rem"><strong>Option B</strong> — Circuit électrique CSV only</p>
+    <button type="button" id="do-ce">Refresh Circuit électrique only</button>
+    <p id="refresh-msg" class="popup-meta"></p>`);
+  document.getElementById('do-ocm').onclick=async()=>{
+    const key=document.getElementById('ocm-key').value.trim(); const msg=document.getElementById('refresh-msg');
+    if(!key){ msg.textContent='Paste an API key first.'; return; }
+    msg.textContent='Fetching…'; try{ localStorage.setItem(OCM_KEY,key); const n=await refreshFromOcm(key); msg.textContent='Done. '+n+' stations after dedupe.'; }catch(err){ msg.textContent='Failed: '+err.message; }
+  };
+  document.getElementById('do-ce').onclick=async()=>{
+    const msg=document.getElementById('refresh-msg'); msg.textContent='Fetching…';
+    try{ const n=await refreshFromCircuitElectrique(); msg.textContent='Done. '+n+' stations after dedupe.'; }catch(err){ msg.textContent='Failed: '+err.message; }
+  };
+};
+
+fillSettingsForm();
+setFont(fontPx);
+
+async function loadStations(){
+  const res=await fetch(STATIONS_URL, {cache:'no-cache'});
+  if(!res.ok) throw new Error('Could not load '+STATIONS_URL+' (HTTP '+res.status+'). Open this folder over http, not as a local file.');
+  const data=await res.json();
+  META=data.meta||{};
+  const list=data.stations||[];
+  if(!Array.isArray(list) || !list.length) throw new Error('Station list was empty.');
+  STATIONS=list;
+  rebuildStationIndex();
+  return data;
+}
+
+document.getElementById('status').textContent='Loading stations…';
+const __chargerMapReady=loadStations().then((data)=>{
+  migrateColorsAfterDedupe(STATIONS);
+  initMap();
+  const got=STATIONS.length;
+  const expected=(data.stats&&data.stats.after)||got;
+  if(got!==expected) console.warn('Station count '+got+' !== stats.after '+expected);
+  return {got, expected, meta:META};
+}).catch((err)=>{
+  document.getElementById('status').textContent='Failed to load stations';
+  openModal('Could not load stations', `<p>${escapeHtml(err.message||String(err))}</p><p>This North America map keeps the station list in <strong>stations-na.json</strong> (~4.3 MB) so the HTML stays small enough for a phone. Serve the folder with a local web server, or put both files on GitHub Pages. Opening the HTML as a file usually blocks the load.</p>`);
+  throw err;
+});
+
+window.__chargerMapTest = { get STATIONS(){return STATIONS;}, get META(){return META;}, getColor, trailerInfo, settings, notes, colors, arrivalPctAtKm, rangeFlagForPct, rangeToEmptyKm, consumption, COLOR_KEY, SETTINGS_KEY, NOTES_KEY, ready: __chargerMapReady };
+
+</script>
+</body>
+</html>
