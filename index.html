@@ -275,6 +275,8 @@ let fontPx = Number(localStorage.getItem(FONT_KEY) || 18);
 let routeLayer = null, startMarker = null, endMarker = null, youMarker = null, rangeMarker = null;
 let here = null;
 let mapDragged = false;
+let userLocated = false;
+const GEO_OPTS = {enableHighAccuracy:false, timeout:15000, maximumAge:600000};
 let routeState = null, pickMode = null, pendingDest = null, pendingPlan = false, selectedDest = null;
 let planning = false, destSeq = 0, destResults = [], nominatimNextAt = 0;
 let detourById = new Map();
@@ -938,10 +940,10 @@ function initMap(){
   armMapTouches();
   map.on('popupopen', (e)=>{ if(e.popup) armPopupLinks(e.popup); });
   map.on('zoomend', refreshSoloIcons);
-  buildMarkers();
-  if(STATIONS.length) map.fitBounds(L.latLngBounds(STATIONS.map(s=>[s.lat,s.lon])).pad(0.05), {animate:false});
   map.on('dragstart', ()=>{ mapDragged=true; });
-  locateOnLoad();
+  buildMarkers();
+  if(userLocated && !mapDragged) showHere(here.lat, here.lon);
+  else if(!mapDragged && STATIONS.length) map.fitBounds(L.latLngBounds(STATIONS.map(s=>[s.lat,s.lon])).pad(0.05), {animate:false});
   map.on('click',(e)=>{
     if(pickMode==='dest'){
       pickMode=null; setPickBanner('');
@@ -1041,6 +1043,13 @@ function placeYouMarker(lat, lon){
   }).addTo(map);
   here={lat, lon, label:'My location'};
 }
+function showHere(lat, lon){
+  here={lat:+lat, lon:+lon, label:'My location'};
+  userLocated=true;
+  if(!map) return;
+  placeYouMarker(here.lat, here.lon);
+  if(!mapDragged) map.setView([here.lat, here.lon], 11, {animate:false});
+}
 function getCurrentPosition(){
   return new Promise((resolve,reject)=>{
     if(!navigator.geolocation){ reject(new Error('Geolocation is not available on this device.')); return; }
@@ -1055,17 +1064,25 @@ function getCurrentPosition(){
     );
   });
 }
+function onLivePosition(pos){
+  if(!pos||!pos.coords) return;
+  showHere(pos.coords.latitude, pos.coords.longitude);
+}
 function locateOnLoad(){
-  if(!navigator.geolocation||!map) return;
-  let settled=false;
-  const timer=setTimeout(()=>{ settled=true; }, 8000);
-  navigator.geolocation.getCurrentPosition(pos=>{
-    if(settled) return;
-    clearTimeout(timer);
-    const lat=pos.coords.latitude, lon=pos.coords.longitude;
-    placeYouMarker(lat, lon);
-    if(!mapDragged) map.setView([lat, lon], 11, {animate:false});
-  }, ()=>{ clearTimeout(timer); }, {enableHighAccuracy:false, timeout:8000, maximumAge:120000});
+  if(!navigator.geolocation||locateOnLoad._started) return;
+  locateOnLoad._started=true;
+  navigator.geolocation.getCurrentPosition(onLivePosition, function(){
+    if(userLocated) return;
+    let watchId=null;
+    const stop=()=>{ if(watchId!=null){ navigator.geolocation.clearWatch(watchId); watchId=null; } };
+    watchId=navigator.geolocation.watchPosition(function(pos){
+      stop();
+      onLivePosition(pos);
+    }, function(err){
+      if(err&&err.code===1) stop();
+    }, GEO_OPTS);
+    setTimeout(stop, 15000);
+  }, GEO_OPTS);
 }
 async function fetchOsrmRoutePoints(points){
   const path=points.map(p=>`${p.lon},${p.lat}`).join(';');
@@ -2044,6 +2061,7 @@ async function loadStations(){
 }
 
 document.getElementById('status').textContent='Loading stations…';
+locateOnLoad();
 const __chargerMapReady=loadStations().then((data)=>{
   migrateColorsAfterDedupe(STATIONS);
   colorMigration=migrateListedGreenOverOldYellow(STATIONS);
