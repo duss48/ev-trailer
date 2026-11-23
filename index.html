@@ -568,14 +568,23 @@ function armPopupLinks(popup){
   }, true);
   // Leaflet's disableClickPropagation stops touchstart on the popup. iOS Safari
   // then never clicks an <a> inside it, so Street View does nothing.
+  // window.open stays in the browser, where Google only shows a still photo.
+  // Sending the Maps URL through the page itself lets iOS open the Maps app.
+  function iosDevice(){
+    return /iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  }
   root.addEventListener('touchend', function(e){
     const a=e.target.closest&&e.target.closest('a.streetview');
     if(!a||!root.contains(a)) return;
-    const href=a.href;
-    if(!href) return;
+    const href=a.getAttribute('href')||a.href;
+    if(!href||href==='#') return;
     e.preventDefault();
     e.stopPropagation();
     a._openedByTouch=true;
+    if(iosDevice()){
+      window.location.href=href;
+      return;
+    }
     const opened=window.open(href, '_blank', 'noopener,noreferrer');
     if(opened) opened.opener=null;
   }, {passive:false});
