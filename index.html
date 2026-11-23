@@ -140,7 +140,8 @@ button:disabled{opacity:.55;cursor:wait}
 .toast-copy.show{display:block}
 .marker-cluster-small,.marker-cluster-medium,.marker-cluster-large{background-clip:padding-box;background-color:rgba(90,104,122,.45)}
 .marker-cluster-small div,.marker-cluster-medium div,.marker-cluster-large div{background-color:#3c4754;color:#fff;font-weight:700;width:34px;height:34px;margin-left:5px;margin-top:5px}
-.marker-cluster span{line-height:34px}
+.marker-cluster-trailer{background-color:rgba(31,157,85,.45)}
+.marker-cluster span{line-height:34px;font-size:16px;font-weight:700}
 
 </style>
 </head>
@@ -816,6 +817,7 @@ function applyFilters(){
     if(want.hasLayer(m)) continue;
     attachMarker(m, col);
   }
+  refreshClusterIcons();
   updateCounts(); renderDetourList();
 }
 function recolourMarker(id){
@@ -839,6 +841,7 @@ function recolourMarker(id){
   }
   syncPopupColorState(id, col);
   if(scroller) scroller.scrollTop=scrollTop;
+  refreshClusterIcons();
   updateCounts();
   renderDetourList();
 }
@@ -863,6 +866,7 @@ function buildMarkers(){
     m.bindPopup(()=>popupHtml(s), popupOptions());
     m.on('popupopen', ()=>fillPopupPhoto(s.id));
     m.on('add', ()=>tagMarkerIcon(m));
+    m._stationId=s.id;
     markerById.set(s.id,m);
     if(visibleColor(col)&&visibleCountry(s.country)) attachMarker(m, col);
   }
@@ -929,16 +933,55 @@ function readSettingsForm(){
   saveSettings();
 }
 
+let greenClusterPoints=null;
+function greenStationsForClusters(){
+  if(greenClusterPoints) return greenClusterPoints;
+  greenClusterPoints=[];
+  for(const s of STATIONS){
+    if(getColor(s.id)==='green') greenClusterPoints.push(s);
+  }
+  return greenClusterPoints;
+}
+function clusterHasGreen(cluster){
+  const kids=cluster.getAllChildMarkers?cluster.getAllChildMarkers():[];
+  for(let i=0;i<kids.length;i++){
+    const id=kids[i]._stationId;
+    if(id&&getColor(id)==='green') return true;
+  }
+  if(!map||!cluster.getLatLng) return false;
+  const zoom=map.getZoom();
+  const center=map.project(cluster.getLatLng(), zoom);
+  const limit=60*60;
+  const greens=greenStationsForClusters();
+  for(let i=0;i<greens.length;i++){
+    const s=greens[i];
+    const p=map.project([s.lat,s.lon], zoom);
+    const dx=center.x-p.x, dy=center.y-p.y;
+    if(dx*dx+dy*dy<=limit) return true;
+  }
+  return false;
+}
+function clusterIcon(cluster){
+  const count=cluster.getChildCount();
+  const trailer=clusterHasGreen(cluster);
+  const fill=trailer?COLORS.green:'#3c4754';
+  const ink=trailer?inkForFill(COLORS.green):'#ffffff';
+  const size=count<10?'small':count<100?'medium':'large';
+  const font=count<10?18:count<100?16:14;
+  const html=`<div style="background-color:${fill};color:${ink}"><span style="color:${ink};font-size:${font}px">${count}</span></div>`;
+  const trailerClass=trailer?' marker-cluster-trailer':'';
+  return L.divIcon({html, className:'marker-cluster marker-cluster-'+size+trailerClass, iconSize:[44,44]});
+}
+function refreshClusterIcons(){
+  greenClusterPoints=null;
+  if(markersLayer&&markersLayer.refreshClusters) markersLayer.refreshClusters();
+}
 function initMap(){
   map=L.map('map',{zoomControl:true}).setView([48,-96],4);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19, attribution:'&copy; OpenStreetMap · Open Charge Map · OSRM'}).addTo(map);
   markersLayer=L.markerClusterGroup({
     showCoverageOnHover:false, maxClusterRadius:60, spiderfyOnMaxZoom:true, disableClusteringAtZoom:12, chunkedLoading:true,
-    iconCreateFunction(cluster){
-      const count=cluster.getChildCount();
-      const size=count<10?'small':count<100?'medium':'large';
-      return L.divIcon({html:'<div><span>'+count+'</span></div>', className:'marker-cluster marker-cluster-'+size, iconSize:[44,44]});
-    }
+    iconCreateFunction:clusterIcon
   });
   soloLayer=L.layerGroup();
   map.addLayer(markersLayer);
