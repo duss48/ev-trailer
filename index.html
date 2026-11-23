@@ -148,6 +148,23 @@ button:disabled{opacity:.55;cursor:wait}
 .marker-cluster-small div,.marker-cluster-medium div,.marker-cluster-large div{background-color:#3c4754;color:#fff;font-weight:700;width:34px;height:34px;margin-left:5px;margin-top:5px}
 .marker-cluster-trailer{background-color:rgba(31,157,85,.45)}
 .marker-cluster span{line-height:34px;font-size:16px;font-weight:700}
+#addbar{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;padding:.55rem .75rem;background:#121821;border-bottom:2px solid var(--border)}
+#addbar input{flex:1 1 220px;min-height:56px;background:#0f1419;color:var(--text);border:2px solid var(--border);border-radius:10px;padding:.5rem .7rem;font-size:1.15rem}
+#add-msg{width:100%;margin:0;color:#ffb4b4;font-weight:700}
+.mine-pin{display:flex;flex-direction:column;align-items:center;width:110px}
+.mine-pin .badge{box-shadow:0 0 0 4px #fff, 0 0 0 7px #111}
+.mine-label{margin-top:3px;background:#111;color:#fff;font-weight:700;font-size:14px;line-height:1.2;padding:.2rem .45rem;border-radius:8px;white-space:nowrap;border:2px solid #fff}
+.mine-flag{font-size:1.2rem;font-weight:700;margin:.2rem 0 .45rem}
+#charger-form{display:none;position:fixed;inset:0;z-index:4100;background:rgba(0,0,0,.55);padding:1rem;overflow:auto}
+#charger-form.open{display:block}
+#charger-form .card{background:var(--panel);border:2px solid var(--border);border-radius:16px;padding:1rem 1rem 1.2rem;width:min(560px,100%);margin:0 auto}
+#charger-form h2{font-size:1.7rem;margin:0 0 .6rem}
+#charger-form label{display:block;font-size:1.2rem;font-weight:700;margin:.55rem 0 .25rem}
+#charger-form input,#charger-form textarea{width:100%;font-size:1.35rem;min-height:64px;background:#0f1419;color:var(--text);border:2px solid var(--border);border-radius:12px;padding:.55rem .7rem}
+#charger-form textarea{min-height:120px}
+#charger-form .toggle{font-size:1.25rem;min-height:64px}
+#charger-form button{width:100%;font-size:1.35rem;min-height:64px;margin-top:.45rem}
+#cf-msg{color:#ffb4b4;font-weight:700;font-size:1.15rem;min-height:1.4em}
 
 </style>
 </head>
@@ -155,6 +172,11 @@ button:disabled{opacity:.55;cursor:wait}
 <div id="map-stage">
   <div id="pick-banner"></div>
   <div id="map" role="application" aria-label="Charger map"></div>
+</div>
+<div id="addbar">
+  <input type="text" id="add-address" placeholder="Address for a new charger" autocomplete="street-address" enterkeyhint="search">
+  <button type="button" id="btn-add-charger" class="primary">Add charger</button>
+  <p id="add-msg"></p>
 </div>
 <div id="topbar">
   <h1>DC chargers 50 kW+ · Canada &amp; US</h1>
@@ -237,6 +259,23 @@ button:disabled{opacity:.55;cursor:wait}
   </label>
   <span id="counts"></span>
 </div>
+<div id="charger-form" hidden>
+  <div class="card" role="dialog" aria-labelledby="charger-form-title">
+    <h2 id="charger-form-title">Add charger</h2>
+    <label for="cf-name">Name</label>
+    <input type="text" id="cf-name" autocomplete="off">
+    <label for="cf-ports">Number of chargers</label>
+    <input type="number" id="cf-ports" min="1" max="99" step="1" inputmode="numeric">
+    <label for="cf-kw">kW per charger</label>
+    <input type="number" id="cf-kw" min="1" max="1000" step="1" inputmode="decimal">
+    <label class="toggle" for="cf-trailer"><input type="checkbox" id="cf-trailer"> Trailer friendly</label>
+    <label for="cf-notes">Notes</label>
+    <textarea id="cf-notes" placeholder="Pull-through, gate code, which stall"></textarea>
+    <p id="cf-msg"></p>
+    <button type="button" id="cf-save" class="primary">Save charger</button>
+    <button type="button" id="cf-cancel">Cancel</button>
+  </div>
+</div>
 <div id="sv-panel" hidden>
   <div id="sv-bar">
     <button type="button" id="sv-close">Close</button>
@@ -259,6 +298,7 @@ const FONT_KEY = 'chargerMap.fontPx';
 const OCM_KEY = 'chargerMap.ocmApiKey';
 const SETTINGS_KEY = 'chargerMap.settings.v1';
 const NOTES_KEY = 'chargerMap.notes.v1';
+const CUSTOM_KEY = 'chargerMap.custom.v1';
 const COLORS = { blue: '#2f6fed', yellow: '#e6b800', green: '#1f9d55' };
 const OSRM = 'https://router.project-osrm.org';
 const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
@@ -282,6 +322,7 @@ const LOGO_ZOOM = 12;
 const LISTED_GREEN_MIGRATE_KEY = 'chargerMap.listedGreenMigration.v1';
 let colors = loadJSON(COLOR_KEY, {});
 let notes = loadJSON(NOTES_KEY, {});
+let customChargers = loadCustomChargers();
 let settings = Object.assign({}, DEFAULT_SETTINGS, loadJSON(SETTINGS_KEY, {}));
 let fontPx = Number(localStorage.getItem(FONT_KEY) || 18);
 let routeLayer = null, startMarker = null, endMarker = null, youMarker = null, rangeMarker = null;
@@ -301,6 +342,21 @@ function loadJSON(key, fallback) {
 }
 function saveColors(){ localStorage.setItem(COLOR_KEY, JSON.stringify(colors)); }
 function saveNotes(){ localStorage.setItem(NOTES_KEY, JSON.stringify(notes)); }
+function loadCustomChargers(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(CUSTOM_KEY)||'[]');
+    return Array.isArray(raw)?raw.filter(s=>s&&s.id&&isFinite(s.lat)&&isFinite(s.lon)):[];
+  }catch{ return []; }
+}
+function saveCustomChargers(){ localStorage.setItem(CUSTOM_KEY, JSON.stringify(customChargers)); }
+function attachCustomStations(){
+  const ids=new Set(customChargers.map(c=>c.id));
+  for(let i=STATIONS.length-1;i>=0;i--){
+    if(STATIONS[i].custom||ids.has(STATIONS[i].id)) STATIONS.splice(i,1);
+  }
+  for(const c of customChargers) STATIONS.push(c);
+  rebuildStationIndex();
+}
 function saveSettings(){ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
 function rebuildStationIndex(){
   stationById=new Map();
@@ -495,13 +551,21 @@ function dotHtml(colorName, withNote){
 function markerIsDot(colorName, zoom){
   return (colorName==='green'||colorName==='yellow') && zoom<LOGO_ZOOM;
 }
-function pinIcon(network, colorName, withNote, zoom){
+function myChargerHtml(colorName, withNote){
+  const fill=COLORS[colorName]||COLORS.blue;
+  const ink=inkForFill(fill);
+  const note=withNote?'<span class="note-dot" title="Has notes"></span>':'';
+  return `<div class="mine-pin"><div class="badge mine-badge" style="--fill:${fill};--ink:${ink}">${note}<span class="mono" style="color:${ink}">ME</span></div><span class="mine-label">My charger</span></div>`;
+}
+function pinIcon(network, colorName, withNote, zoom, custom){
   const z=zoom==null ? (map&&map.getZoom?map.getZoom():LOGO_ZOOM) : zoom;
-  const dot=markerIsDot(colorName, z);
-  const cacheKey=(networkKey(network)||monogramFor(network))+'|'+colorName+'|'+(withNote?1:0)+'|'+(dot?'dot':'logo');
+  const dot=!custom && markerIsDot(colorName, z);
+  const cacheKey=(custom?'mine':(networkKey(network)||monogramFor(network)))+'|'+colorName+'|'+(withNote?1:0)+'|'+(dot?'dot':'logo');
   if(iconCache.has(cacheKey)) return iconCache.get(cacheKey);
-  const html=dot ? dotHtml(colorName, withNote) : logoHtml(network, colorName, withNote);
-  const icon=L.divIcon({className:'marker-wrap', html, iconSize:[MARKER_PX,MARKER_PX], iconAnchor:[MARKER_PX/2,MARKER_PX/2], popupAnchor:[0,-MARKER_PX/2]});
+  const html=custom ? myChargerHtml(colorName, withNote) : (dot ? dotHtml(colorName, withNote) : logoHtml(network, colorName, withNote));
+  const icon=custom
+    ? L.divIcon({className:'marker-wrap mine-wrap', html, iconSize:[110,72], iconAnchor:[55,22], popupAnchor:[0,-24]})
+    : L.divIcon({className:'marker-wrap', html, iconSize:[MARKER_PX,MARKER_PX], iconAnchor:[MARKER_PX/2,MARKER_PX/2], popupAnchor:[0,-MARKER_PX/2]});
   iconCache.set(cacheKey, icon);
   return icon;
 }
@@ -553,7 +617,7 @@ function armMapTouches(){
   }, true);
 }
 function paintMarker(marker, station, colorName){
-  marker.setIcon(pinIcon(station.network, colorName, hasNote(station.id)));
+  marker.setIcon(pinIcon(station.network, colorName, hasNote(station.id), null, !!station.custom));
   tagMarkerIcon(marker);
 }
 function armPopupLinks(popup){
@@ -783,8 +847,10 @@ function popupHtml(s){
     rangeLine=`<p class="popup-range ${rf.cls}">${escapeHtml(rf.label)}</p>`;
   }
   const noteText=(notes[s.id]&&notes[s.id].text)||'';
+  const mine=s.custom?`<p class="mine-flag">My charger</p><div class="popup-links"><button type="button" data-edit-charger="${escapeHtml(s.id)}">Edit</button><button type="button" data-delete-charger="${escapeHtml(s.id)}">Delete</button></div>`:'';
   return `
     <div class="popup-title">${escapeHtml(s.name)}</div>
+    ${mine}
     <p class="popup-chargers">${escapeHtml(chargerLine(s))}</p>
     <div class="popup-links">
       <button type="button" class="directions" data-route-lat="${lat}" data-route-lon="${lon}" data-route-name="${escapeHtml(s.name)}">Directions</button>
@@ -847,7 +913,7 @@ function attachMarker(m, col){
 function applyFilters(){
   for(const s of STATIONS){
     const m=markerById.get(s.id); if(!m) continue;
-    const col=getColor(s.id), show=visibleColor(col)&&visibleCountry(s.country);
+    const col=getColor(s.id), show=visibleColor(col)&&(s.custom||visibleCountry(s.country));
     if(!show){ detachMarker(m); continue; }
     const want=markerLayerFor(col);
     if(want.hasLayer(m)) continue;
@@ -898,13 +964,13 @@ function buildMarkers(){
   const z=map.getZoom();
   for(const s of STATIONS){
     const col=getColor(s.id);
-    const m=L.marker([s.lat,s.lon],{icon:pinIcon(s.network,col,hasNote(s.id),z), title:s.name, keyboard:true});
+    const m=L.marker([s.lat,s.lon],{icon:pinIcon(s.network,col,hasNote(s.id),z,!!s.custom), title:s.name, keyboard:true});
     m.bindPopup(()=>popupHtml(s), popupOptions());
     m.on('popupopen', ()=>fillPopupPhoto(s.id));
     m.on('add', ()=>tagMarkerIcon(m));
     m._stationId=s.id;
     markerById.set(s.id,m);
-    if(visibleColor(col)&&visibleCountry(s.country)) attachMarker(m, col);
+    if(visibleColor(col)&&(s.custom||visibleCountry(s.country))) attachMarker(m, col);
   }
   refreshSoloIcons._dot = map.getZoom()<LOGO_ZOOM;
   updateCounts();
@@ -1012,6 +1078,148 @@ function refreshClusterIcons(){
   greenClusterPoints=null;
   if(markersLayer&&markersLayer.refreshClusters) markersLayer.refreshClusters();
 }
+let chargerDraft=null;
+function openChargerForm(draft){
+  chargerDraft=draft;
+  document.getElementById('charger-form-title').textContent=draft.id?'Edit charger':'Add charger';
+  document.getElementById('cf-name').value=draft.name||'';
+  document.getElementById('cf-ports').value=draft.ports||1;
+  document.getElementById('cf-kw').value=draft.kw||50;
+  document.getElementById('cf-trailer').checked=!!draft.trailer;
+  document.getElementById('cf-notes').value=draft.notes||'';
+  document.getElementById('cf-msg').textContent='';
+  const form=document.getElementById('charger-form');
+  form.hidden=false;
+  form.classList.add('open');
+  if(map) map.closePopup();
+  setTimeout(()=>document.getElementById('cf-name').focus(), 50);
+}
+function closeChargerForm(){
+  const form=document.getElementById('charger-form');
+  form.classList.remove('open');
+  form.hidden=true;
+  chargerDraft=null;
+}
+function saveChargerForm(){
+  const msg=document.getElementById('cf-msg');
+  const name=document.getElementById('cf-name').value.trim();
+  const ports=Number(document.getElementById('cf-ports').value);
+  const kw=Number(document.getElementById('cf-kw').value);
+  const trailer=document.getElementById('cf-trailer').checked;
+  const noteText=document.getElementById('cf-notes').value;
+  if(!name){ msg.textContent='Type a name for this charger.'; return; }
+  if(!Number.isFinite(ports)||ports<1){ msg.textContent='Type how many chargers there are.'; return; }
+  if(!Number.isFinite(kw)||kw<=0){ msg.textContent='Type the kW of each charger.'; return; }
+  if(!chargerDraft||!isFinite(chargerDraft.lat)||!isFinite(chargerDraft.lon)){ msg.textContent='This charger has no location.'; return; }
+  const id=chargerDraft.id||('mine-'+Date.now().toString(36)+Math.random().toString(36).slice(2,6));
+  const station={
+    id, name, lat:+chargerDraft.lat, lon:+chargerDraft.lon,
+    address:chargerDraft.address||'', city:chargerDraft.city||'', prov:chargerDraft.prov||'', country:chargerDraft.country||'',
+    network:'My charger', ports:Math.round(ports), kw, trailerFriendly:trailer,
+    trailerFriendlySource: trailer ? 'your charger' : '',
+    custom:true
+  };
+  const idx=customChargers.findIndex(c=>c.id===id);
+  if(idx>=0) customChargers[idx]=station; else customChargers.push(station);
+  saveCustomChargers();
+  colors[id]=trailer?'green':'blue';
+  saveColors();
+  const prev=notes[id]||{};
+  if(noteText.trim()||prev.hasPhoto) notes[id]={text:noteText, hasPhoto:!!prev.hasPhoto};
+  else delete notes[id];
+  saveNotes();
+  attachCustomStations();
+  placeCustomMarker(station);
+  refreshClusterIcons();
+  updateCounts();
+  closeChargerForm();
+  const m=markerById.get(id);
+  if(m&&map){ map.setView([station.lat, station.lon], Math.max(map.getZoom(), 14), {animate:false}); m.openPopup(); }
+}
+function placeCustomMarker(station){
+  if(!map||!markersLayer) return;
+  let m=markerById.get(station.id);
+  const col=getColor(station.id);
+  if(!m){
+    m=L.marker([station.lat, station.lon], {icon:pinIcon(station.network, col, hasNote(station.id), null, true), title:station.name, keyboard:true});
+    m.bindPopup(()=>popupHtml(getStation(station.id)||station), popupOptions());
+    m.on('popupopen', ()=>fillPopupPhoto(station.id));
+    m.on('add', ()=>tagMarkerIcon(m));
+    m._stationId=station.id;
+    markerById.set(station.id, m);
+  }else{
+    m.setLatLng([station.lat, station.lon]);
+    paintMarker(m, station, col);
+  }
+  if(visibleColor(col)) attachMarker(m, col);
+  else detachMarker(m);
+}
+function deleteCustomCharger(id){
+  customChargers=customChargers.filter(c=>c.id!==id);
+  saveCustomChargers();
+  delete colors[id]; saveColors();
+  delete notes[id]; saveNotes();
+  const m=markerById.get(id);
+  if(m){ if(m.closePopup) m.closePopup(); detachMarker(m); markerById.delete(id); }
+  for(let i=STATIONS.length-1;i>=0;i--){ if(STATIONS[i].id===id) STATIONS.splice(i,1); }
+  rebuildStationIndex();
+  refreshClusterIcons();
+  updateCounts();
+}
+function confirmDeleteCharger(id){
+  const s=getStation(id);
+  if(!s) return;
+  openModal('Delete charger', `<p style="font-size:1.25rem">Delete <strong>${escapeHtml(s.name)}</strong>? This removes your saved charger.</p><button type="button" class="primary" id="cf-do-delete" style="font-size:1.35rem;min-height:64px;width:100%">Delete this charger</button>`);
+  document.getElementById('cf-do-delete').onclick=()=>{ deleteCustomCharger(id); closeModal(); };
+}
+function editCustomCharger(id){
+  const s=getStation(id);
+  if(!s||!s.custom) return;
+  openChargerForm({
+    id:s.id, lat:s.lat, lon:s.lon, address:s.address||'', city:s.city||'', prov:s.prov||'', country:s.country||'',
+    name:s.name, ports:s.ports, kw:s.kw, trailer:getColor(s.id)==='green', notes:(notes[s.id]&&notes[s.id].text)||''
+  });
+}
+function armLongPress(){
+  const root=map.getContainer();
+  if(root._evLongPress) return;
+  root._evLongPress=true;
+  let timer=null, start=null;
+  function pointOf(e){
+    if(e.touches&&e.touches[0]) return {x:e.touches[0].clientX, y:e.touches[0].clientY, n:e.touches.length};
+    return {x:e.clientX, y:e.clientY, n:1};
+  }
+  function blocked(t){
+    return t&&t.closest&&t.closest('.leaflet-marker-icon, .leaflet-control, .leaflet-popup, button, a, input, textarea');
+  }
+  function cancel(){ clearTimeout(timer); timer=null; start=null; }
+  function down(e){
+    if(e.touches&&e.touches.length>1){ cancel(); return; }
+    if(blocked(e.target)) return;
+    const p=pointOf(e);
+    start={x:p.x, y:p.y};
+    timer=setTimeout(function(){
+      timer=null;
+      if(!start||!map) return;
+      const ll=map.mouseEventToLatLng({clientX:start.x, clientY:start.y});
+      start=null;
+      openChargerForm({lat:ll.lat, lon:ll.lng, address:'', name:'', ports:1, kw:50, trailer:true, notes:''});
+    }, 600);
+  }
+  function move(e){
+    if(!start) return;
+    const p=pointOf(e);
+    if(p.n>1 || Math.abs(p.x-start.x)+Math.abs(p.y-start.y)>12) cancel();
+  }
+  root.addEventListener('touchstart', down, {passive:true});
+  root.addEventListener('touchmove', move, {passive:true});
+  root.addEventListener('touchend', cancel, {passive:true});
+  root.addEventListener('touchcancel', cancel, {passive:true});
+  root.addEventListener('mousedown', down);
+  root.addEventListener('mousemove', move);
+  root.addEventListener('mouseup', cancel);
+  root.addEventListener('mouseleave', cancel);
+}
 function initMap(){
   map=L.map('map',{zoomControl:true}).setView([48,-96],4);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19, attribution:'&copy; OpenStreetMap · Open Charge Map · OSRM'}).addTo(map);
@@ -1024,6 +1232,7 @@ function initMap(){
   map.addLayer(soloLayer);
   map.on('layeradd', (e)=>{ if(e.layer&&e.layer.getElement) tagMarkerIcon(e.layer); });
   armMapTouches();
+  armLongPress();
   map.on('popupopen', (e)=>{ if(e.popup) armPopupLinks(e.popup); });
   map.on('zoomend', refreshSoloIcons);
   map.on('dragstart', ()=>{ mapDragged=true; });
@@ -1861,6 +2070,10 @@ document.addEventListener('click', async (e)=>{
       return;
     }
   }
+  const delBtn=e.target.closest('[data-delete-charger]');
+  if(delBtn){ confirmDeleteCharger(delBtn.getAttribute('data-delete-charger')); return; }
+  const editBtn=e.target.closest('[data-edit-charger]');
+  if(editBtn){ editCustomCharger(editBtn.getAttribute('data-edit-charger')); return; }
   const svBtn=e.target.closest('[data-sv-lat]');
   if(svBtn){
     if(Date.now()-(document._svTouchAt||0)<700) return;
@@ -1885,6 +2098,10 @@ function applyColorTag(btn){
   saveColors(); recolourMarker(id);
 }
 document.addEventListener('touchend', (e)=>{
+  const delBtn=e.target.closest&&e.target.closest('[data-delete-charger]');
+  if(delBtn){ confirmDeleteCharger(delBtn.getAttribute('data-delete-charger')); return; }
+  const editBtn=e.target.closest&&e.target.closest('[data-edit-charger]');
+  if(editBtn){ editCustomCharger(editBtn.getAttribute('data-edit-charger')); return; }
   const svBtn=e.target.closest&&e.target.closest('[data-sv-lat]');
   if(svBtn){
     beginStreetView(svBtn);
@@ -1986,7 +2203,7 @@ document.getElementById('btn-export').onclick=async()=>{
   const payload={
     version:2,
     exportedAt:new Date().toISOString(),
-    colors, notes, settings, photos
+    colors, notes, settings, photos, customChargers
   };
   const blob=new Blob([JSON.stringify(payload)],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='charger-map-backup.json'; a.click(); URL.revokeObjectURL(a.href);
@@ -2013,6 +2230,7 @@ document.getElementById('import-file').onchange=async(e)=>{
     }
     if(data.notes && typeof data.notes==='object'){ notes=data.notes; saveNotes(); }
     if(data.settings && typeof data.settings==='object'){ Object.assign(settings, DEFAULT_SETTINGS, data.settings); saveSettings(); fillSettingsForm(); }
+    if(Array.isArray(data.customChargers)){ customChargers=data.customChargers.filter(s=>s&&s.id&&isFinite(+s.lat)&&isFinite(+s.lon)); saveCustomChargers(); attachCustomStations(); if(map) buildMarkers(); }
     if(data.photos && typeof data.photos==='object'){
       for(const [id, dataUrl] of Object.entries(data.photos)){
         if(typeof dataUrl==='string' && dataUrl.startsWith('data:')) await idbSetPhoto(id, dataUrl);
@@ -2026,6 +2244,23 @@ document.getElementById('import-file').onchange=async(e)=>{
 };
 
 document.getElementById('btn-route').onclick=()=>startRouteFlow();
+document.getElementById('btn-add-charger').onclick=async()=>{
+  const q=document.getElementById('add-address').value.trim();
+  const msg=document.getElementById('add-msg');
+  if(!q){ msg.textContent='Type an address, then tap Add charger.'; return; }
+  msg.textContent='Looking up that address…';
+  document.getElementById('btn-add-charger').disabled=true;
+  try{
+    const hit=await geocode(q);
+    msg.textContent='';
+    const bits=(hit.label||'').split(',').map(s=>s.trim());
+    openChargerForm({lat:hit.lat, lon:hit.lon, address:hit.label||q, name:bits[0]||'', ports:1, kw:50, trailer:true, notes:''});
+  }catch(err){
+    msg.textContent=err.message||String(err);
+  }finally{ document.getElementById('btn-add-charger').disabled=false; }
+};
+document.getElementById('cf-save').onclick=saveChargerForm;
+document.getElementById('cf-cancel').onclick=closeChargerForm;
 document.getElementById('btn-dest-map').onclick=()=>{ pickMode='dest'; setPickBanner('Tap the map to set the destination'); };
 document.getElementById('dest-input').addEventListener('input', ()=>{
   selectedDest=null;
@@ -2061,7 +2296,7 @@ document.getElementById('corridor-km').addEventListener('change',()=>{ if(routeS
 function replaceStations(next){
   const deduped=dedupeStations(next);
   STATIONS.length=0; STATIONS.push(...deduped);
-  rebuildStationIndex();
+  attachCustomStations();
   migrateColorsAfterDedupe(STATIONS);
   buildMarkers();
   return {before:next.length, after:deduped.length};
@@ -2173,6 +2408,7 @@ async function loadStations(){
 document.getElementById('status').textContent='Loading stations…';
 locateOnLoad();
 const __chargerMapReady=loadStations().then((data)=>{
+  attachCustomStations();
   migrateColorsAfterDedupe(STATIONS);
   colorMigration=migrateListedGreenOverOldYellow(STATIONS);
   initMap();
@@ -2189,7 +2425,7 @@ const __chargerMapReady=loadStations().then((data)=>{
   throw err;
 });
 
-window.__chargerMapTest = { get STATIONS(){return STATIONS;}, get META(){return META;}, get map(){return map;}, get here(){return here;}, get routeState(){return routeState;}, get settings(){return settings;}, getColor, trailerInfo, notes, colors, COLORS, DEFAULT_SETTINGS, inkForFill, relativeLuminance, contrastRatio, recolourMarker, arrivalPctAtKm, rangeFlagForPct, rangeToEmptyKm, consumption, towRangeKm, trailerExtraMin, chargerLine, chooseTrailerStop, planTrip, geocode, placeYou:placeYouMarker, COLOR_KEY, SETTINGS_KEY, NOTES_KEY, LISTED_GREEN_MIGRATE_KEY, REGULAR_STOP_LABEL, get colorMigration(){return colorMigration;}, ready: __chargerMapReady };
+window.__chargerMapTest = { get STATIONS(){return STATIONS;}, get META(){return META;}, get map(){return map;}, get here(){return here;}, get routeState(){return routeState;}, get settings(){return settings;}, getColor, trailerInfo, notes, colors, COLORS, DEFAULT_SETTINGS, inkForFill, relativeLuminance, contrastRatio, recolourMarker, arrivalPctAtKm, rangeFlagForPct, rangeToEmptyKm, consumption, towRangeKm, trailerExtraMin, chargerLine, chooseTrailerStop, planTrip, geocode, placeYou:placeYouMarker, get customChargers(){return customChargers;}, CUSTOM_KEY, COLOR_KEY, SETTINGS_KEY, NOTES_KEY, LISTED_GREEN_MIGRATE_KEY, REGULAR_STOP_LABEL, get colorMigration(){return colorMigration;}, ready: __chargerMapReady };
 
 </script>
 </body>
