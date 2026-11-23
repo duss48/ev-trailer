@@ -260,7 +260,7 @@ const DEFAULT_SETTINGS = {
   towRangeKm: 100,
   trailerExtraMin: 20
 };
-const RANGE_BUFFER = 0.15;
+const RANGE_BUFFER = 0.05;
 const REGULAR_STOP_LABEL = 'Regular charger (no trailer pull-through found)';
 
 let map, markersLayer, soloLayer, markerById = new Map(), stationById = new Map();
@@ -1446,7 +1446,7 @@ async function scoreCandidatesOnce(origin, ahead, candidates){
 function rangeGapWarning(fromLabel){
   const range=towRangeKm();
   const usable=Math.round(range*(1-RANGE_BUFFER));
-  return `No charger within ${usable} km of ${fromLabel}. That is your ${range} km towing range with a 15% buffer left. This trip cannot be planned through to the destination.`;
+  return `No charger within ${usable} km of ${fromLabel}. That is your ${range} km towing range with a 5% buffer left. This trip cannot be planned through to the destination.`;
 }
 async function planOneLeg(ctx){
   const corridors=[12000, 25000, 45000];
@@ -1529,7 +1529,7 @@ function renderTripStops(stops, warning){
   document.getElementById('detour-status').textContent=stops.length
     ? `${stops.length} stop${stops.length===1?'':'s'} · a trailer charger is chosen when it adds at most ${trailerExtraMin()} min`
     : `No charging stop needed. The drive is within ${usable} km.`;
-  document.getElementById('range-status').textContent=`Towing range ${towRangeKm()} km per charge · stops are planned by ${usable} km so about 15% is left`;
+  document.getElementById('range-status').textContent=`Towing range ${towRangeKm()} km per charge · stops are planned by ${usable} km so about 5% is left`;
   const list=document.getElementById('detour-list');
   if(!stops.length){ list.innerHTML=''; return; }
   let cum=0;
@@ -1631,7 +1631,7 @@ async function planTrip(start, end){
     const usableKm=Math.round(towRangeKm()*(1-RANGE_BUFFER));
     const sum=document.getElementById('route-summary');
     sum.innerHTML=`${formatKm(drawn.distance)} · ${formatMin(drawn.duration)} · ${stops.length} charging stop${stops.length===1?'':'s'}
-      <span class="muted"> · Towing range ${towRangeKm()} km · stop by ${usableKm} km (15% buffer) · up to ${trailerExtraMin()} extra min for a trailer charger</span>
+      <span class="muted"> · Towing range ${towRangeKm()} km · stop by ${usableKm} km (5% buffer) · up to ${trailerExtraMin()} extra min for a trailer charger</span>
       <span class="muted"> · ${escapeHtml(start.label||'Start')} → ${escapeHtml(end.label||'Destination')}</span>`;
     sum.classList.add('show');
     document.getElementById('steps-error').textContent=warning||'';
