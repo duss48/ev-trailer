@@ -41,13 +41,21 @@ button:disabled{opacity:.55;cursor:wait}
 .field input[type=number],.field input[type=text],#searchbar input[type=text],#searchbar select{
   min-height:44px;background:#0f1419;color:var(--text);border:2px solid var(--border);border-radius:10px;padding:.45rem .65rem;width:100%
 }
+.field-large{flex:1 1 240px;min-width:min(100%,240px)}
+.field-large label{font-size:1.05rem;color:var(--text)}
+.field.field-large input[type=number]{font-size:1.5rem;font-weight:700;min-height:64px;padding:.55rem .75rem}
+#dest-wrap{position:relative;flex:1 1 240px;min-width:min(100%,220px)}
+#dest-suggest{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:1200;list-style:none;margin:0;padding:.3rem;background:#121821;border:2px solid var(--border);border-radius:12px;max-height:280px;overflow:auto;box-shadow:0 10px 28px rgba(0,0,0,.4)}
+#dest-suggest button{display:block;width:100%;text-align:left;background:transparent;border:none;border-radius:8px;min-height:48px;padding:.45rem .55rem}
+#dest-suggest button:hover,#dest-suggest button:focus{background:#243044}
+#dest-suggest .credit{color:var(--muted);font-size:.85rem;padding:.25rem .45rem .15rem}
 .toggle{display:flex;align-items:center;gap:.45rem;min-height:44px;font-weight:700}
 #route-summary{display:none;width:100%;padding:.45rem .15rem .1rem;font-size:1.1rem;font-weight:700}
 #route-summary.show{display:block}
 #route-summary .muted{color:var(--muted);font-weight:400;font-size:.95rem}
 #main{flex:0 0 auto;width:100%;display:flex;flex-flow:row wrap;align-items:flex-start;position:relative}
 #map-stage{position:relative;flex:0 0 auto;width:100%;max-width:100%}
-#map{width:100%;height:75vh;height:75dvh;background:#0c1218}
+#map{width:100%;height:75vh;height:75dvh;background:#0c1218;touch-action:none}
 #detour-panel{display:none;flex:1 1 280px;width:min(440px,100%);min-width:min(100%,280px);max-height:100vh;max-height:100dvh;background:var(--panel);border-left:2px solid var(--border);overflow:auto;flex-direction:column}
 #detour-panel.show{display:flex}
 #detour-panel header{position:sticky;top:0;background:var(--panel);border-bottom:2px solid var(--border);padding:.65rem .75rem;z-index:2}
@@ -66,6 +74,11 @@ button:disabled{opacity:.55;cursor:wait}
 #detour-list .range-flag.oor{background:#3d1515;color:#ffb4b4;border-color:#e85d5d}
 #detour-list .note-line{margin-top:.3rem;color:#cde4ff;font-weight:700}
 #detour-loading,#detour-error{padding:.75rem;color:var(--muted)} #detour-error{color:#ffb4b4}
+#trip-warning{display:none;margin:.45rem 0 0;padding:.65rem .7rem;border-radius:10px;background:#3d1515;color:#ffb4b4;font-weight:700;line-height:1.35}
+#trip-warning.show{display:block}
+#detour-list .stop-label{color:#ffb4b4;font-weight:700;margin-top:.35rem}
+.trip-stop{background:none!important;border:none!important;pointer-events:none}
+.trip-stop-n{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;border:2px solid #111;font-weight:700;font-size:14px;box-shadow:0 1px 4px rgba(0,0,0,.5)}
 #pick-banner{display:none;position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:1100;background:#243044;border:2px solid var(--border);padding:.55rem .85rem;border-radius:12px;font-weight:700;max-width:92%;text-align:center}
 #pick-banner.show{display:block}
 #legend{display:flex;flex-wrap:wrap;gap:.65rem;align-items:center;padding:.55rem .75rem;background:var(--panel);border-top:2px solid var(--border);font-size:.95rem}
@@ -77,6 +90,7 @@ button:disabled{opacity:.55;cursor:wait}
 .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--panel);color:var(--text);border-radius:var(--radius);box-shadow:0 8px 28px rgba(0,0,0,.45)}
 .leaflet-popup-content{margin:.85rem 1rem;font-size:1rem;line-height:1.4;min-width:240px;max-width:320px}
 .popup-title{font-size:1.15rem;font-weight:700;margin:0 0 .35rem}
+.popup-chargers{font-size:1.25rem;font-weight:700;line-height:1.35;margin:.15rem 0 .6rem;font-style:normal;text-transform:none}
 .popup-address{display:block;font-size:1.15rem;font-weight:700;line-height:1.35;color:var(--text);text-decoration:underline;text-underline-offset:3px;margin:.25rem 0 .55rem;cursor:pointer}
 .popup-meta{color:var(--muted);margin:.15rem 0}
 .popup-detour{font-size:1.1rem;font-weight:700;color:#ffe08a;margin:.35rem 0}
@@ -151,13 +165,19 @@ button:disabled{opacity:.55;cursor:wait}
   <div class="field"><label for="set-cons">kWh/100 km (no trailer)</label><input type="number" id="set-cons" min="5" max="80" step="0.5"></div>
   <div class="field"><label for="set-cons-tow">kWh/100 km (with trailer)</label><input type="number" id="set-cons-tow" min="5" max="100" step="0.5"></div>
   <div class="field"><label for="set-reserve">Arrive with reserve %</label><input type="number" id="set-reserve" min="0" max="40" step="1"></div>
+  <div class="field field-large"><label for="set-tow-range">Towing range (km per charge)</label><input type="number" id="set-tow-range" min="30" max="600" step="5" inputmode="numeric"></div>
+  <div class="field field-large"><label for="set-trailer-extra">Max extra minutes for a trailer charger</label><input type="number" id="set-trailer-extra" min="0" max="180" step="1" inputmode="numeric"></div>
   <label class="toggle"><input type="checkbox" id="set-towing"> Towing trailer</label>
   <button type="button" id="btn-settings-save" class="primary">Save settings</button>
   <button type="button" id="btn-settings-close">Close</button>
 </div>
 <div id="searchbar">
-  <input type="text" id="dest-input" placeholder="Search destination address" autocomplete="street-address" enterkeyhint="search">
-  <button type="button" id="btn-route" class="primary">Route</button>
+  <div id="dest-wrap">
+    <input type="text" id="dest-input" placeholder="Destination city or address" autocomplete="off" enterkeyhint="search" aria-autocomplete="list" aria-controls="dest-suggest">
+    <ul id="dest-suggest" hidden></ul>
+  </div>
+  <button type="button" id="btn-route" class="primary">Plan trip</button>
+  <button type="button" id="btn-dest-map">Tap map</button>
   <button type="button" id="btn-clear-route" disabled>Clear route</button>
   <label for="corridor-km">Near route</label>
   <select id="corridor-km"><option value="2">2 km</option><option value="5" selected>5 km</option><option value="10">10 km</option><option value="20">20 km</option></select>
@@ -171,7 +191,7 @@ button:disabled{opacity:.55;cursor:wait}
   </div>
   <aside id="detour-panel" aria-label="Chargers along route">
     <header>
-      <h2>Chargers on the way</h2>
+      <h2 id="detour-heading">Chargers on the way</h2>
       <div id="detour-filters">
         <label class="swatch"><input type="checkbox" id="d-blue" checked><span class="dot blue"></span> Blue</label>
         <label class="swatch"><input type="checkbox" id="d-yellow" checked><span class="dot yellow"></span> Yellow</label>
@@ -181,6 +201,7 @@ button:disabled{opacity:.55;cursor:wait}
       </div>
       <div id="detour-status" class="popup-meta"></div>
       <div id="range-status" class="popup-meta" style="font-weight:700;color:#cde4ff"></div>
+      <div id="trip-warning" role="alert"></div>
     </header>
     <div id="detour-loading" style="display:none">Working out detours… this can take a few seconds.</div>
     <div id="detour-error" style="display:none"></div>
@@ -235,8 +256,12 @@ const DEFAULT_SETTINGS = {
   consNoTrailer: 19,
   consTrailer: 35,
   towing: false,
-  reservePct: 10
+  reservePct: 10,
+  towRangeKm: 100,
+  trailerExtraMin: 20
 };
+const RANGE_BUFFER = 0.15;
+const REGULAR_STOP_LABEL = 'Regular charger (no trailer pull-through found)';
 
 let map, markersLayer, soloLayer, markerById = new Map(), stationById = new Map();
 let colorMigration = {applied:false, cleared:0, tags:0, ids:[]};
@@ -250,7 +275,8 @@ let fontPx = Number(localStorage.getItem(FONT_KEY) || 18);
 let routeLayer = null, startMarker = null, endMarker = null, youMarker = null, rangeMarker = null;
 let here = null;
 let mapDragged = false;
-let routeState = null, pickMode = null, pendingDest = null;
+let routeState = null, pickMode = null, pendingDest = null, pendingPlan = false, selectedDest = null;
+let planning = false, destSeq = 0, destResults = [], nominatimNextAt = 0;
 let detourById = new Map();
 const iconCache = new Map();
 let dbPromise = null;
@@ -465,43 +491,56 @@ function pinIcon(network, colorName, withNote, zoom){
   iconCache.set(cacheKey, icon);
   return icon;
 }
-function armMarkerTap(marker){
+function tagMarkerIcon(marker){
   const icon=marker&&marker.getElement&&marker.getElement();
-  if(!icon||icon._evTrailerTap) return;
-  icon._evTrailerTap=true;
-  const isCluster=icon.classList.contains('marker-cluster');
+  if(icon) icon._evMarker=marker;
+}
+function armMapTouches(){
+  const root=map.getContainer();
+  if(root._evTrailerMapTouch) return;
+  root._evTrailerMapTouch=true;
   let start=null;
-  L.DomEvent.on(icon, 'touchstart', function(e){
-    L.DomEvent.stopPropagation(e);
-    const t=e.touches&&e.touches[0];
-    start=t?{x:t.clientX,y:t.clientY}:null;
-  });
-  L.DomEvent.on(icon, 'mousedown', L.DomEvent.stopPropagation);
-  if(isCluster) return;
-  L.DomEvent.on(icon, 'click', function(e){
-    L.DomEvent.stopPropagation(e);
-    L.DomEvent.preventDefault(e);
-    if(icon._suppressClick) return;
-    if(!(marker.getPopup&&marker.getPopup())) return;
-    if(marker.isPopupOpen&&marker.isPopupOpen()) marker.closePopup();
-    else marker.openPopup();
-  });
-  L.DomEvent.on(icon, 'touchend', function(e){
+  let pointers=0;
+  root.addEventListener('touchstart', function(e){
+    pointers=e.touches?e.touches.length:0;
+    if(pointers!==1){ start=null; return; }
+    const t=e.touches[0];
+    start={x:t.clientX,y:t.clientY,target:e.target};
+  }, {passive:true});
+  root.addEventListener('touchend', function(e){
+    if(pointers>1){ start=null; pointers=e.touches?e.touches.length:0; return; }
+    const began=start;
+    start=null;
+    if(!began) return;
     const t=e.changedTouches&&e.changedTouches[0];
-    if(start&&t && Math.abs(t.clientX-start.x)+Math.abs(t.clientY-start.y)>28) return;
+    const dist=t?Math.abs(t.clientX-began.x)+Math.abs(t.clientY-began.y):99;
+    if(dist>16) return;
+    const icon=began.target&&began.target.closest&&began.target.closest('.leaflet-marker-icon');
+    if(!icon||icon.classList.contains('you-are-here')) return;
+    const marker=icon._evMarker;
+    if(!marker) return;
+    if(icon.classList.contains('marker-cluster')){
+      marker.fire('click');
+      return;
+    }
     if(!(marker.getPopup&&marker.getPopup())) return;
-    // The synthetic click that follows a tap would reach the map and close the popup.
-    L.DomEvent.preventDefault(e);
-    L.DomEvent.stopPropagation(e);
+    e.preventDefault();
     icon._suppressClick=true;
-    setTimeout(function(){ icon._suppressClick=false; }, 700);
+    setTimeout(function(){ icon._suppressClick=false; }, 400);
     if(marker.isPopupOpen&&marker.isPopupOpen()) marker.closePopup();
     else marker.openPopup();
-  });
+  }, {passive:false});
+  root.addEventListener('click', function(e){
+    const icon=e.target&&e.target.closest&&e.target.closest('.leaflet-marker-icon');
+    if(icon&&icon._suppressClick){
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, true);
 }
 function paintMarker(marker, station, colorName){
   marker.setIcon(pinIcon(station.network, colorName, hasNote(station.id)));
-  armMarkerTap(marker);
+  tagMarkerIcon(marker);
 }
 function armPopupLinks(popup){
   const root=popup&&popup.getElement&&popup.getElement();
@@ -672,6 +711,18 @@ function migrateListedGreenOverOldYellow(list){
   return {applied:true, cleared, tags:ids.length, ids};
 }
 
+function chargerLine(s){
+  const n=Number(s&&s.ports);
+  const kw=Number(s&&s.kw);
+  const countKnown=Number.isFinite(n)&&n>0;
+  const powerKnown=Number.isFinite(kw)&&kw>0;
+  const power=powerKnown?(Math.round(kw*10)/10).toString().replace(/\.0$/,'')+' kW':null;
+  if(!countKnown&&!power) return 'Chargers: Unknown';
+  if(!countKnown) return 'Chargers: Unknown. Power: '+power;
+  const noun=n===1?'charger':'chargers';
+  if(!power) return n+' '+noun+': Unknown';
+  return n+' '+noun+': '+n+' x '+power+'. Plug type: Unknown';
+}
 function popupHtml(s){
   const col=getColor(s.id);
   const lat=Number(s.lat), lon=Number(s.lon);
@@ -688,6 +739,7 @@ function popupHtml(s){
   const noteText=(notes[s.id]&&notes[s.id].text)||'';
   return `
     <div class="popup-title">${escapeHtml(s.name)}</div>
+    <p class="popup-chargers">${escapeHtml(chargerLine(s))}</p>
     <div class="popup-links">
       <button type="button" class="directions" data-route-lat="${lat}" data-route-lon="${lon}" data-route-name="${escapeHtml(s.name)}">Directions</button>
       <a class="streetview" href="${escapeHtml(streetView)}" target="_blank" rel="noopener noreferrer">Street View</a>
@@ -695,8 +747,6 @@ function popupHtml(s){
     <a class="popup-address" href="${escapeHtml(mapsPlace)}" target="_blank" rel="noopener noreferrer" data-copy-address="${escapeHtml(s.address)}">${escapeHtml(s.address||(lat+', '+lon))}</a>
     <p class="popup-meta"><strong>Where:</strong> ${escapeHtml(s.city||"")} ${escapeHtml(s.prov||"")} ${escapeHtml(s.country||"")}</p>
     <p class="popup-meta"><strong>Network:</strong> ${escapeHtml(s.network)}</p>
-    <p class="popup-meta"><strong>Max power:</strong> ${escapeHtml(s.kw)} kW</p>
-    <p class="popup-meta"><strong>DC ports:</strong> ${escapeHtml(s.ports)}</p>
     <p class="popup-trailer ${tr.cls}">${escapeHtml(tr.text)}</p>
     ${rangeLine}${detourLine}
     <div class="popup-actions">
@@ -803,7 +853,7 @@ function buildMarkers(){
     const m=L.marker([s.lat,s.lon],{icon:pinIcon(s.network,col,hasNote(s.id),z), title:s.name, keyboard:true});
     m.bindPopup(()=>popupHtml(s), popupOptions());
     m.on('popupopen', ()=>fillPopupPhoto(s.id));
-    m.on('add', ()=>armMarkerTap(m));
+    m.on('add', ()=>tagMarkerIcon(m));
     markerById.set(s.id,m);
     if(visibleColor(col)&&visibleCountry(s.country)) attachMarker(m, col);
   }
@@ -830,23 +880,43 @@ function setPickBanner(text){
   if(!text){ b.classList.remove('show'); b.textContent=''; return; }
   b.textContent=text; b.classList.add('show');
 }
+function numOr(id, fallback){
+  const el=document.getElementById(id);
+  if(!el) return fallback;
+  const raw=el.value;
+  if(raw===''||raw==null) return fallback;
+  const n=Number(raw);
+  return Number.isFinite(n)?n:fallback;
+}
+function towRangeKm(){
+  const n=Number(settings.towRangeKm);
+  return Number.isFinite(n)&&n>=30?n:100;
+}
+function trailerExtraMin(){
+  const n=Number(settings.trailerExtraMin);
+  return Number.isFinite(n)&&n>=0?n:20;
+}
 function fillSettingsForm(){
   document.getElementById('set-kwh').value=settings.usableKwh;
   document.getElementById('set-pct').value=settings.batteryPct;
   document.getElementById('set-cons').value=settings.consNoTrailer;
   document.getElementById('set-cons-tow').value=settings.consTrailer;
   document.getElementById('set-reserve').value=settings.reservePct;
+  document.getElementById('set-tow-range').value=towRangeKm();
+  document.getElementById('set-trailer-extra').value=trailerExtraMin();
   document.getElementById('set-towing').checked=!!settings.towing;
 }
 function readSettingsForm(){
-  settings={
-    usableKwh:Number(document.getElementById('set-kwh').value)||75,
-    batteryPct:Number(document.getElementById('set-pct').value)||90,
-    consNoTrailer:Number(document.getElementById('set-cons').value)||19,
-    consTrailer:Number(document.getElementById('set-cons-tow').value)||35,
-    reservePct:Number(document.getElementById('set-reserve').value)||10,
+  Object.assign(settings, {
+    usableKwh:numOr('set-kwh', 75),
+    batteryPct:numOr('set-pct', 90),
+    consNoTrailer:numOr('set-cons', 19),
+    consTrailer:numOr('set-cons-tow', 35),
+    reservePct:numOr('set-reserve', 10),
+    towRangeKm:Math.max(30, numOr('set-tow-range', 100)),
+    trailerExtraMin:Math.max(0, numOr('set-trailer-extra', 20)),
     towing:document.getElementById('set-towing').checked
-  };
+  });
   saveSettings();
 }
 
@@ -864,7 +934,8 @@ function initMap(){
   soloLayer=L.layerGroup();
   map.addLayer(markersLayer);
   map.addLayer(soloLayer);
-  map.on('layeradd', (e)=>{ if(e.layer&&e.layer.getElement) armMarkerTap(e.layer); });
+  map.on('layeradd', (e)=>{ if(e.layer&&e.layer.getElement) tagMarkerIcon(e.layer); });
+  armMapTouches();
   map.on('popupopen', (e)=>{ if(e.popup) armPopupLinks(e.popup); });
   map.on('zoomend', refreshSoloIcons);
   buildMarkers();
@@ -872,10 +943,18 @@ function initMap(){
   map.on('dragstart', ()=>{ mapDragged=true; });
   locateOnLoad();
   map.on('click',(e)=>{
+    if(pickMode==='dest'){
+      pickMode=null; setPickBanner('');
+      const dest={lat:e.latlng.lat, lon:e.latlng.lng, label:'Map pin'};
+      document.getElementById('dest-input').value=dest.lat.toFixed(5)+', '+dest.lon.toFixed(5);
+      selectedDest=dest;
+      beginTrip(dest);
+      return;
+    }
     if(pickMode!=='start') return;
     pickMode=null; setPickBanner('');
     const start={lat:e.latlng.lat, lon:e.latlng.lng, label:'Map pin'};
-    if(pendingDest) routeFromTo(start, pendingDest);
+    if(pendingDest) routeFromTo(start, pendingDest, {planStops:pendingPlan});
   });
   window.addEventListener('resize', ()=>{ if(map) map.invalidateSize(); });
   requestAnimationFrame(()=>{ if(map) map.invalidateSize(); });
@@ -912,12 +991,40 @@ function pointAlongRoute(coordsLngLat, targetM){
   const last=coordsLngLat[coordsLngLat.length-1];
   return {lat:last[1], lon:last[0]};
 }
-async function geocode(query){
-  const res=await fetch(NOMINATIM+'?format=json&limit=1&q='+encodeURIComponent(query),{headers:{'Accept':'application/json'}});
+async function nominatimSearch(query, limit){
+  const q=String(query||'').trim();
+  if(q.length<2) return [];
+  const wait=nominatimNextAt-Date.now();
+  if(wait>0) await new Promise(r=>setTimeout(r, wait));
+  nominatimNextAt=Date.now()+1100;
+  // Browser fetch cannot set User-Agent. Nominatim's usage policy accepts the
+  // page Referer instead, so this request keeps the default referrer.
+  const url=NOMINATIM+'?format=jsonv2&limit='+(limit||5)+'&q='+encodeURIComponent(q);
+  const res=await fetch(url,{
+    headers:{'Accept':'application/json','Accept-Language':'en'},
+    referrerPolicy:'strict-origin-when-cross-origin'
+  });
   if(!res.ok) throw new Error('Address lookup failed ('+res.status+')');
   const data=await res.json();
-  if(!data||!data.length) throw new Error('No match for that address');
-  return {lat:+data[0].lat, lon:+data[0].lon, label:data[0].display_name};
+  return (data||[]).map(d=>({lat:+d.lat, lon:+d.lon, label:d.display_name})).filter(d=>isFinite(d.lat)&&isFinite(d.lon));
+}
+async function geocode(query){
+  const rows=await nominatimSearch(query, 1);
+  if(!rows.length) throw new Error('No match for that address');
+  return rows[0];
+}
+function hideSuggest(){
+  const list=document.getElementById('dest-suggest');
+  if(!list) return;
+  list.hidden=true; list.innerHTML='';
+}
+function renderSuggestions(rows){
+  destResults=rows||[];
+  const list=document.getElementById('dest-suggest');
+  if(!list) return;
+  if(!destResults.length){ hideSuggest(); return; }
+  list.innerHTML=destResults.map((row,i)=>`<li><button type="button" data-dest-i="${i}">${escapeHtml(row.label)}</button></li>`).join('')+'<li class="credit">Search © OpenStreetMap contributors</li>';
+  list.hidden=false;
 }
 function placeYouMarker(lat, lon){
   if(!map) return;
@@ -960,8 +1067,9 @@ function locateOnLoad(){
     if(!mapDragged) map.setView([lat, lon], 11, {animate:false});
   }, ()=>{ clearTimeout(timer); }, {enableHighAccuracy:false, timeout:8000, maximumAge:120000});
 }
-async function fetchOsrmRoute(start,end){
-  const url=`${OSRM}/route/v1/driving/${start.lon},${start.lat};${end.lon},${end.lat}?overview=full&geometries=geojson&steps=true`;
+async function fetchOsrmRoutePoints(points){
+  const path=points.map(p=>`${p.lon},${p.lat}`).join(';');
+  const url=`${OSRM}/route/v1/driving/${path}?overview=full&geometries=geojson&steps=true`;
   let res;
   try{ res=await fetch(url); }
   catch{ throw new Error('Could not reach the routing server. Check your connection and try again.'); }
@@ -974,6 +1082,9 @@ async function fetchOsrmRoute(start,end){
   const steps=[];
   for(const leg of r.legs||[]) for(const step of leg.steps||[]) steps.push(step);
   return {duration:r.duration, distance:r.distance, geometry:r.geometry, steps};
+}
+async function fetchOsrmRoute(start,end){
+  return fetchOsrmRoutePoints([start, end]);
 }
 function directionWord(mod){
   const words={
@@ -1061,6 +1172,14 @@ function clearRoute(){
   document.getElementById('detour-error').style.display='none';
   document.getElementById('detour-status').textContent='';
   document.getElementById('range-status').textContent='';
+  const heading=document.getElementById('detour-heading');
+  if(heading) heading.textContent='Chargers on the way';
+  const filters=document.getElementById('detour-filters');
+  if(filters) filters.style.display='';
+  const warn=document.getElementById('trip-warning');
+  if(warn){ warn.textContent=''; warn.classList.remove('show'); }
+  const loading=document.getElementById('detour-loading');
+  if(loading) loading.textContent='Working out detours… this can take a few seconds.';
   clearStepsPanel();
   updateCounts();
 }
@@ -1176,7 +1295,11 @@ async function analyzeRouteChargers(){
   const panel=document.getElementById('detour-panel');
   const loading=document.getElementById('detour-loading');
   const err=document.getElementById('detour-error');
-  panel.classList.add('show'); loading.style.display='block'; err.style.display='none'; err.textContent='';
+  panel.classList.add('show'); loading.style.display='block'; loading.textContent='Working out detours… this can take a few seconds.'; err.style.display='none'; err.textContent='';
+  const heading=document.getElementById('detour-heading');
+  if(heading) heading.textContent='Chargers on the way';
+  const filters=document.getElementById('detour-filters');
+  if(filters) filters.style.display='';
   document.getElementById('detour-list').innerHTML='';
   document.getElementById('detour-status').textContent='Finding chargers near the route…';
   try{
@@ -1192,7 +1315,324 @@ async function analyzeRouteChargers(){
     err.textContent='Could not compute detours: '+(e.message||e)+'. You can still use Google Directions.';
   }
 }
-async function routeFromTo(start,end){
+function powerText(s){
+  const kw=Number(s&&s.kw);
+  if(!Number.isFinite(kw)||kw<=0) return 'Unknown kW';
+  return (Math.round(kw*10)/10).toString().replace(/\.0$/,'')+' kW';
+}
+function countText(s){
+  const n=Number(s&&s.ports);
+  if(!Number.isFinite(n)||n<=0) return 'Chargers: Unknown';
+  return n===1?'1 charger':n+' chargers';
+}
+function chooseTrailerStop(candidates, extraMin, usableM){
+  const inRange=(candidates||[]).filter(c=>c&&c.driveM!=null&&c.driveM<=usableM&&c.addedSec!=null&&isFinite(c.addedSec));
+  const blues=inRange.filter(c=>c.color==='blue').sort((a,b)=>a.addedSec-b.addedSec||b.alongM-a.alongM);
+  const bestBlue=blues[0]||null;
+  const budget=bestBlue?bestBlue.addedSec+Math.max(0, Number(extraMin)||0)*60:Infinity;
+  const rank=c=>c.color==='green'?0:(c.color==='yellow'?1:2);
+  const trailers=inRange.filter(c=>(c.color==='green'||c.color==='yellow')&&c.addedSec<=budget);
+  trailers.sort((a,b)=>rank(a)-rank(b)||b.alongM-a.alongM||a.addedSec-b.addedSec);
+  if(trailers.length) return {chosen:trailers[0], label:null, bestBlue};
+  if(bestBlue) return {chosen:bestBlue, label:REGULAR_STOP_LABEL, bestBlue};
+  return {chosen:null, label:null, bestBlue:null};
+}
+function routeSamples(coords, stepM){
+  if(!coords||!coords.length) return [];
+  const out=[coords[0]];
+  let since=0;
+  for(let i=0;i<coords.length-1;i++){
+    since+=haversineM(coords[i][1], coords[i][0], coords[i+1][1], coords[i+1][0]);
+    if(since>=stepM){ out.push(coords[i+1]); since=0; }
+  }
+  const last=coords[coords.length-1], prev=out[out.length-1];
+  if(prev[0]!==last[0]||prev[1]!==last[1]) out.push(last);
+  return out;
+}
+function indexStationsAlong(geometry){
+  const samples=routeSamples(geometry.coordinates, 2500);
+  let totalM=0, minLat=90, maxLat=-90, minLon=180, maxLon=-180;
+  for(let i=0;i<samples.length;i++){
+    const p=samples[i];
+    if(i>0) totalM+=haversineM(samples[i-1][1], samples[i-1][0], p[1], p[0]);
+    minLat=Math.min(minLat, p[1]); maxLat=Math.max(maxLat, p[1]);
+    minLon=Math.min(minLon, p[0]); maxLon=Math.max(maxLon, p[0]);
+  }
+  const pad=0.7;
+  const indexed=[];
+  for(const s of STATIONS){
+    if(s.lat<minLat-pad||s.lat>maxLat+pad||s.lon<minLon-pad||s.lon>maxLon+pad) continue;
+    const n=nearestOnRoute(s.lat, s.lon, samples);
+    if(n.distM>50000) continue;
+    indexed.push({station:s, distToRouteM:n.distM, alongM:n.alongM, color:getColor(s.id)});
+  }
+  return {indexed, samples, totalM};
+}
+function capCandidates(list, cursorAlong, usableM){
+  const LIMIT=8;
+  const likely=list.filter(c=>c.alongM<=cursorAlong+usableM+1000);
+  const source=likely.length?likely:list;
+  const byDist=source.slice().sort((a,b)=>a.distToRouteM-b.distToRouteM||b.alongM-a.alongM);
+  const byFar=source.slice().sort((a,b)=>b.alongM-a.alongM||a.distToRouteM-b.distToRouteM);
+  const picked=[], seen=new Set();
+  function add(c){
+    if(!c||seen.has(c.station.id)||picked.length>=LIMIT) return;
+    seen.add(c.station.id); picked.push(c);
+  }
+  function take(arr, color, n){
+    let got=0;
+    for(const c of arr){
+      if(got>=n) break;
+      if(c.color!==color||seen.has(c.station.id)) continue;
+      add(c); got++;
+    }
+  }
+  take(byFar, 'green', 2);
+  take(byFar, 'yellow', 1);
+  take(byFar, 'blue', 2);
+  take(byDist, 'green', 1);
+  take(byDist, 'yellow', 1);
+  take(byDist, 'blue', 2);
+  for(const c of byFar) add(c);
+  return picked;
+}
+async function scoreCandidates(origin, ahead, candidates){
+  await new Promise(r=>setTimeout(r, 280));
+  try{ return await scoreCandidatesOnce(origin, ahead, candidates); }
+  catch(e){
+    await new Promise(r=>setTimeout(r, 1200));
+    return await scoreCandidatesOnce(origin, ahead, candidates);
+  }
+}
+async function scoreCandidatesOnce(origin, ahead, candidates){
+  const coords=[{lon:origin.lon, lat:origin.lat}, {lon:ahead.lon, lat:ahead.lat}].concat(candidates.map(c=>({lon:c.station.lon, lat:c.station.lat})));
+  const candIdx=candidates.map((_, j)=>j+2);
+  const sources=[0].concat(candIdx);
+  const destinations=[1].concat(candIdx);
+  const table=await fetchOsrmTable(coords, sources, destinations);
+  const dur=table.durations||[], dist=table.distances||[];
+  const aheadDur=dur[0]&&dur[0][0];
+  const scored=[];
+  for(let j=0;j<candidates.length;j++){
+    const toDur=dur[0]?dur[0][j+1]:null;
+    const toDist=dist[0]?dist[0][j+1]:null;
+    const backDur=dur[j+1]?dur[j+1][0]:null;
+    if(toDur==null||backDur==null||aheadDur==null) continue;
+    const driveM=toDist!=null?toDist:haversineM(origin.lat, origin.lon, candidates[j].station.lat, candidates[j].station.lon)*1.35;
+    scored.push(Object.assign({}, candidates[j], {
+      driveM,
+      addedSec:Math.max(0, toDur+backDur-aheadDur)
+    }));
+  }
+  return scored;
+}
+function rangeGapWarning(fromLabel){
+  const range=towRangeKm();
+  const usable=Math.round(range*(1-RANGE_BUFFER));
+  return `No charger within ${usable} km of ${fromLabel}. That is your ${range} km towing range with a 15% buffer left. This trip cannot be planned through to the destination.`;
+}
+async function planOneLeg(ctx){
+  const corridors=[12000, 25000, 45000];
+  let lastErr=null, sawCandidates=false;
+  for(const corridor of corridors){
+    const pool=ctx.indexed.filter(c=>!ctx.used.has(c.station.id)&&c.distToRouteM<=corridor&&c.alongM>ctx.cursorAlong+2000&&c.alongM<=ctx.cursorAlong+ctx.usableM+15000);
+    const candidates=capCandidates(pool, ctx.cursorAlong, ctx.usableM);
+    if(!candidates.length) continue;
+    sawCandidates=true;
+    const aheadM=Math.min(ctx.totalM, ctx.cursorAlong+ctx.usableM);
+    const ahead=pointAlongRoute(ctx.samples, aheadM);
+    try{
+      const scored=await scoreCandidates(ctx.origin, ahead, candidates);
+      const choice=chooseTrailerStop(scored, trailerExtraMin(), ctx.usableM);
+      if(choice.chosen){
+        const inRange=scored.filter(s=>s.driveM<=ctx.usableM);
+        return {
+          station:choice.chosen.station,
+          color:choice.chosen.color,
+          driveM:choice.chosen.driveM,
+          addedSec:choice.chosen.addedSec,
+          alongM:choice.chosen.alongM,
+          label:choice.label,
+          bestBlueAddedSec:choice.bestBlue?choice.bestBlue.addedSec:null,
+          compared:{
+            green:inRange.filter(s=>s.color==='green').length,
+            yellow:inRange.filter(s=>s.color==='yellow').length,
+            blue:inRange.filter(s=>s.color==='blue').length
+          }
+        };
+      }
+    }catch(e){ lastErr=e; }
+  }
+  if(lastErr&&sawCandidates) throw lastErr;
+  return null;
+}
+function stopNumberIcon(n, color){
+  const fill=COLORS[color]||COLORS.blue;
+  const ink=inkForFill(fill);
+  return L.divIcon({
+    className:'trip-stop',
+    html:`<span class="trip-stop-n" style="background:${fill};color:${ink}">${n}</span>`,
+    iconSize:[28,28],
+    iconAnchor:[14,14]
+  });
+}
+function addStopMarkers(stops){
+  if(!routeLayer) return;
+  stops.forEach((stop,i)=>{
+    routeLayer.addLayer(L.marker([stop.station.lat, stop.station.lon], {
+      icon:stopNumberIcon(i+1, stop.color),
+      interactive:false,
+      keyboard:false,
+      zIndexOffset:900
+    }));
+  });
+}
+function drawUnplannedRemainder(fromAlong, geometry){
+  if(!routeLayer||!geometry) return;
+  const coords=geometry.coordinates||[];
+  const latlngs=[];
+  let along=0;
+  for(let i=0;i<coords.length;i++){
+    if(i>0) along+=haversineM(coords[i-1][1], coords[i-1][0], coords[i][1], coords[i][0]);
+    if(along+1>=fromAlong) latlngs.push([coords[i][1], coords[i][0]]);
+  }
+  if(latlngs.length>=2) routeLayer.addLayer(L.polyline(latlngs,{color:'#e85d5d', weight:5, opacity:0.9, dashArray:'8 10'}));
+}
+function renderTripStops(stops, warning){
+  const panel=document.getElementById('detour-panel');
+  panel.classList.add('show');
+  document.getElementById('detour-heading').textContent='Charging stops';
+  document.getElementById('detour-filters').style.display='none';
+  document.getElementById('detour-loading').style.display='none';
+  document.getElementById('detour-error').style.display='none';
+  const warn=document.getElementById('trip-warning');
+  if(warning){ warn.textContent=warning; warn.classList.add('show'); }
+  else { warn.textContent=''; warn.classList.remove('show'); }
+  const usable=Math.round(towRangeKm()*(1-RANGE_BUFFER));
+  document.getElementById('detour-status').textContent=stops.length
+    ? `${stops.length} stop${stops.length===1?'':'s'} · a trailer charger is chosen when it adds at most ${trailerExtraMin()} min`
+    : `No charging stop needed. The drive is within ${usable} km.`;
+  document.getElementById('range-status').textContent=`Towing range ${towRangeKm()} km per charge · stops are planned by ${usable} km so about 15% is left`;
+  const list=document.getElementById('detour-list');
+  if(!stops.length){ list.innerHTML=''; return; }
+  let cum=0;
+  list.innerHTML=stops.map((d,i)=>{
+    cum+=d.driveM||0;
+    const word=d.color==='green'?'Green':d.color==='yellow'?'Yellow':'Blue';
+    return `<li data-station-id="${escapeHtml(d.station.id)}">
+      <div class="row1"><span class="dot ${d.color}"></span><span>${i+1}. ${escapeHtml(word)} · ${escapeHtml(d.station.name)}</span><span class="added">+${Math.round((d.addedSec||0)/60)} min</span></div>
+      <div class="row2">${escapeHtml(powerText(d.station))} · ${escapeHtml(countText(d.station))}</div>
+      <div class="row2">${escapeHtml(formatKm(d.driveM))} from previous · ${escapeHtml(formatKm(cum))} into the trip</div>
+      ${d.label?`<div class="stop-label">${escapeHtml(d.label)}</div>`:''}
+    </li>`;
+  }).join('');
+}
+function googleDirHref(start, end, stops){
+  const base=`https://www.google.com/maps/dir/?api=1&origin=${start.lat},${start.lon}&destination=${end.lat},${end.lon}`;
+  if(!stops||!stops.length) return base;
+  const wpts=stops.map(s=>s.station.lat+','+s.station.lon).join('|');
+  return base+'&waypoints='+encodeURIComponent(wpts);
+}
+async function planTrip(start, end){
+  if(planning) return routeState;
+  planning=true;
+  const status=document.getElementById('status');
+  const btn=document.getElementById('btn-route');
+  status.textContent='Getting the driving route…';
+  btn.disabled=true;
+  try{
+    const direct=await fetchOsrmRoute(start, end);
+    const usableM=towRangeKm()*(1-RANGE_BUFFER)*1000;
+    status.textContent='Looking for chargers along the route…';
+    const spine=indexStationsAlong(direct.geometry);
+    const indexed=spine.indexed;
+    const totalM=spine.totalM;
+    const stops=[];
+    const used=new Set();
+    let cursor={lat:start.lat, lon:start.lon, label:start.label||'the start'};
+    let cursorAlong=0;
+    let warning='';
+    const maxStops=Math.min(30, Math.ceil((totalM/1000)/Math.max(25, towRangeKm()*0.45))+2);
+    const gapLeft=()=>{
+      const back=pointAlongRoute(spine.samples, cursorAlong);
+      const off=haversineM(cursor.lat, cursor.lon, back.lat, back.lon);
+      return Math.max(0, totalM-cursorAlong)+off;
+    };
+    while(gapLeft()>usableM+400){
+      if(stops.length>=maxStops){
+        warning=rangeGapWarning(cursor.label||'the last stop');
+        break;
+      }
+      status.textContent=`Planning charging stop ${stops.length+1}…`;
+      const leg=await planOneLeg({
+        origin:cursor,
+        samples:spine.samples,
+        cursorAlong,
+        totalM,
+        usableM,
+        indexed,
+        used
+      });
+      if(!leg){
+        warning=rangeGapWarning(cursor.label||'the start');
+        break;
+      }
+      if(leg.alongM<=cursorAlong+1500){
+        warning=rangeGapWarning(leg.station.name);
+        break;
+      }
+      used.add(leg.station.id);
+      stops.push(leg);
+      cursor={lat:leg.station.lat, lon:leg.station.lon, label:leg.station.name};
+      cursorAlong=leg.alongM;
+    }
+    status.textContent=stops.length?'Drawing the route through the stops…':'Drawing the route…';
+    let drawn=direct;
+    if(stops.length){
+      try{
+        drawn=await fetchOsrmRoutePoints([start].concat(stops.map(s=>({lon:s.station.lon, lat:s.station.lat}))).concat([end]));
+      }catch(e){
+        warning=warning||('The stops were chosen, but the route through them could not be drawn: '+(e.message||e));
+      }
+    }
+    routeState={
+      start, end,
+      directSec:drawn.duration, directM:drawn.distance,
+      geometry:drawn.geometry, steps:drawn.steps||[],
+      detours:[], corridorKm:Number(document.getElementById('corridor-km').value)||5,
+      planStops:true, stops, warning, spine:direct.geometry
+    };
+    showRouteOnMap(start, end, drawn.geometry, drawn.duration, drawn.distance, drawn.steps);
+    if(warning) drawUnplannedRemainder(cursorAlong, {coordinates:spine.samples});
+    if(rangeMarker){ map.removeLayer(rangeMarker); rangeMarker=null; }
+    addStopMarkers(stops);
+    const href=googleDirHref(start, end, stops);
+    const g=document.getElementById('btn-google-dir');
+    g.href=href; g.style.display='inline-flex';
+    const sg=document.getElementById('steps-google');
+    sg.href=href; sg.hidden=false;
+    const usableKm=Math.round(towRangeKm()*(1-RANGE_BUFFER));
+    const sum=document.getElementById('route-summary');
+    sum.innerHTML=`${formatKm(drawn.distance)} · ${formatMin(drawn.duration)} · ${stops.length} charging stop${stops.length===1?'':'s'}
+      <span class="muted"> · Towing range ${towRangeKm()} km · stop by ${usableKm} km (15% buffer) · up to ${trailerExtraMin()} extra min for a trailer charger</span>
+      <span class="muted"> · ${escapeHtml(start.label||'Start')} → ${escapeHtml(end.label||'Destination')}</span>`;
+    sum.classList.add('show');
+    document.getElementById('steps-error').textContent=warning||'';
+    renderTripStops(stops, warning);
+    status.textContent=warning?'Trip stopped: no charger in range':`Trip ready · ${stops.length} charging stop${stops.length===1?'':'s'}`;
+    return routeState;
+  }catch(e){
+    const msg=e.message||String(e);
+    showRouteError(msg);
+    openModal('Trip', `<p>${escapeHtml(msg)}</p>`);
+    status.textContent='Trip planning failed';
+  }finally{
+    planning=false;
+    btn.disabled=false;
+  }
+}
+async function routeFromTo(start,end,opts){
+  if(opts&&opts.planStops) return planTrip(start, end);
   document.getElementById('status').textContent='Getting driving route…';
   document.getElementById('btn-route').disabled=true;
   try{
@@ -1208,8 +1648,9 @@ async function routeFromTo(start,end){
     document.getElementById('status').textContent='Routing failed';
   }finally{ document.getElementById('btn-route').disabled=false; }
 }
-function askForStart(dest){
+function askForStart(dest, opts){
   pendingDest=dest;
+  pendingPlan=!!(opts&&opts.planStops);
   openModal('Location needed',`
     <p>Your location could not be used. Permission may be denied, or this device has no position.</p>
     <p>Tap the map to drop a starting pin.</p>
@@ -1222,7 +1663,7 @@ function askForStart(dest){
     const q=document.getElementById('start-input').value.trim(); const msg=document.getElementById('start-msg');
     if(!q){ msg.textContent='Type a start address, or tap the map. An empty address is not used.'; return; }
     msg.textContent='Looking up start…';
-    try{ const start=await geocode(q); closeModal(); await routeFromTo(start,dest); }
+    try{ const start=await geocode(q); closeModal(); await routeFromTo(start,dest,{planStops:pendingPlan}); }
     catch(e){ msg.textContent=e.message||String(e); }
   };
   document.getElementById('do-start-tap').onclick=()=>{ closeModal(); pickMode='start'; setPickBanner('Tap the map to set your starting point'); };
@@ -1254,17 +1695,29 @@ async function startPopupDirections(btn){
     }
   }
 }
+async function beginTrip(dest){
+  document.getElementById('status').textContent='Finding your location…';
+  let start;
+  try{
+    start=here||await getCurrentPosition();
+  }catch(err){
+    document.getElementById('status').textContent='Location needed';
+    askForStart(dest, {planStops:true});
+    return;
+  }
+  if(!youMarker) placeYouMarker(start.lat, start.lon);
+  await routeFromTo(start, dest, {planStops:true});
+}
 async function startRouteFlow(){
+  hideSuggest();
   const q=document.getElementById('dest-input').value.trim();
-  if(!q){ openModal('Search','<p>Type a destination address, then tap Route.</p>'); return; }
+  if(!selectedDest&&!q){ openModal('Search','<p>Type a destination, or tap the map to set one.</p>'); return; }
   document.getElementById('btn-route').disabled=true;
   document.getElementById('status').textContent='Looking up destination…';
   try{
-    const dest=await geocode(q);
-    let start;
-    try{ start=await getCurrentPosition(); }
-    catch{ document.getElementById('btn-route').disabled=false; askForStart(dest); return; }
-    await routeFromTo(start,dest);
+    const dest=selectedDest||await geocode(q);
+    selectedDest=dest;
+    await beginTrip(dest);
   }catch(e){
     openModal('Search',`<p>${escapeHtml(e.message||String(e))}</p>`);
     document.getElementById('status').textContent='Search failed';
@@ -1379,8 +1832,9 @@ document.getElementById('btn-settings-close').onclick=()=>document.getElementByI
 document.getElementById('btn-settings-save').onclick=()=>{
   readSettingsForm();
   document.getElementById('settings').classList.remove('open');
-  if(routeState){
-    // recompute arrival flags with new settings using existing distances
+  if(routeState&&routeState.planStops){
+    planTrip(routeState.start, routeState.end);
+  }else if(routeState){
     for(const d of routeState.detours||[]){
       d.arrivalPct=arrivalPctAtKm((d.toChargerM!=null?d.toChargerM:d.alongM)/1000);
     }
@@ -1431,7 +1885,7 @@ document.getElementById('import-file').onchange=async(e)=>{
       }
     }
     if(data.notes && typeof data.notes==='object'){ notes=data.notes; saveNotes(); }
-    if(data.settings && typeof data.settings==='object'){ settings=Object.assign({}, DEFAULT_SETTINGS, data.settings); saveSettings(); fillSettingsForm(); }
+    if(data.settings && typeof data.settings==='object'){ Object.assign(settings, DEFAULT_SETTINGS, data.settings); saveSettings(); fillSettingsForm(); }
     if(data.photos && typeof data.photos==='object'){
       for(const [id, dataUrl] of Object.entries(data.photos)){
         if(typeof dataUrl==='string' && dataUrl.startsWith('data:')) await idbSetPhoto(id, dataUrl);
@@ -1445,10 +1899,37 @@ document.getElementById('import-file').onchange=async(e)=>{
 };
 
 document.getElementById('btn-route').onclick=()=>startRouteFlow();
-document.getElementById('dest-input').addEventListener('keydown',e=>{ if(e.key==='Enter') startRouteFlow(); });
+document.getElementById('btn-dest-map').onclick=()=>{ pickMode='dest'; setPickBanner('Tap the map to set the destination'); };
+document.getElementById('dest-input').addEventListener('input', ()=>{
+  selectedDest=null;
+  clearTimeout(document._destTimer);
+  const q=document.getElementById('dest-input').value.trim();
+  if(q.length<3){ hideSuggest(); return; }
+  document._destTimer=setTimeout(async()=>{
+    const seq=++destSeq;
+    try{
+      const rows=await nominatimSearch(q, 5);
+      if(seq!==destSeq) return;
+      renderSuggestions(rows);
+    }catch(_){ if(seq===destSeq) hideSuggest(); }
+  }, 1000);
+});
+document.getElementById('dest-input').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){ e.preventDefault(); startRouteFlow(); }
+  if(e.key==='Escape') hideSuggest();
+});
+document.getElementById('dest-suggest').addEventListener('click', (e)=>{
+  const btn=e.target.closest&&e.target.closest('[data-dest-i]');
+  if(!btn) return;
+  const row=destResults[Number(btn.getAttribute('data-dest-i'))];
+  if(!row) return;
+  selectedDest=row;
+  document.getElementById('dest-input').value=row.label;
+  hideSuggest();
+});
 document.getElementById('btn-clear-route').onclick=()=>clearRoute();
 document.getElementById('btn-steps-clear').onclick=()=>clearRoute();
-document.getElementById('corridor-km').addEventListener('change',()=>{ if(routeState) analyzeRouteChargers(); });
+document.getElementById('corridor-km').addEventListener('change',()=>{ if(routeState&&!routeState.planStops) analyzeRouteChargers(); });
 
 function replaceStations(next){
   const deduped=dedupeStations(next);
@@ -1580,7 +2061,7 @@ const __chargerMapReady=loadStations().then((data)=>{
   throw err;
 });
 
-window.__chargerMapTest = { get STATIONS(){return STATIONS;}, get META(){return META;}, get map(){return map;}, get here(){return here;}, getColor, trailerInfo, settings, notes, colors, COLORS, inkForFill, relativeLuminance, contrastRatio, recolourMarker, arrivalPctAtKm, rangeFlagForPct, rangeToEmptyKm, consumption, COLOR_KEY, SETTINGS_KEY, NOTES_KEY, LISTED_GREEN_MIGRATE_KEY, get colorMigration(){return colorMigration;}, ready: __chargerMapReady };
+window.__chargerMapTest = { get STATIONS(){return STATIONS;}, get META(){return META;}, get map(){return map;}, get here(){return here;}, get routeState(){return routeState;}, get settings(){return settings;}, getColor, trailerInfo, notes, colors, COLORS, DEFAULT_SETTINGS, inkForFill, relativeLuminance, contrastRatio, recolourMarker, arrivalPctAtKm, rangeFlagForPct, rangeToEmptyKm, consumption, towRangeKm, trailerExtraMin, chargerLine, chooseTrailerStop, planTrip, geocode, placeYou:placeYouMarker, COLOR_KEY, SETTINGS_KEY, NOTES_KEY, LISTED_GREEN_MIGRATE_KEY, REGULAR_STOP_LABEL, get colorMigration(){return colorMigration;}, ready: __chargerMapReady };
 
 </script>
 </body>
