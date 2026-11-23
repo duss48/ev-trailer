@@ -3,7 +3,6 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="EV Trailer">
 <title>EV Trailer</title>
 <link rel="icon" href="ev-trailer-logo.png" type="image/png">
@@ -53,10 +52,10 @@ button:disabled{opacity:.55;cursor:wait}
 #route-summary{display:none;width:100%;padding:.45rem .15rem .1rem;font-size:1.1rem;font-weight:700}
 #route-summary.show{display:block}
 #route-summary .muted{color:var(--muted);font-weight:400;font-size:.95rem}
-#main{flex:0 0 auto;width:100%;display:flex;flex-flow:row wrap;align-items:flex-start;position:relative}
+#main{flex:0 0 auto;width:100%;display:block;position:relative}
 #map-stage{position:relative;flex:0 0 auto;width:100%;max-width:100%}
 #map{width:100%;height:75vh;height:75dvh;background:#0c1218;touch-action:none}
-#detour-panel{display:none;flex:1 1 280px;width:min(440px,100%);min-width:min(100%,280px);max-height:100vh;max-height:100dvh;background:var(--panel);border-left:2px solid var(--border);overflow:auto;flex-direction:column}
+#detour-panel{display:none;width:100%;max-height:70dvh;background:var(--panel);border-top:2px solid var(--border);overflow:auto;flex-direction:column}
 #detour-panel.show{display:flex}
 #detour-panel header{position:sticky;top:0;background:var(--panel);border-bottom:2px solid var(--border);padding:.65rem .75rem;z-index:2}
 #detour-panel header h2{margin:0 0 .35rem;font-size:1.15rem}
@@ -139,7 +138,6 @@ button:disabled{opacity:.55;cursor:wait}
 .you-label{position:absolute;left:26px;top:-2px;background:#111;color:#fff;font-weight:700;font-size:15px;line-height:1.2;padding:.25rem .5rem;border-radius:8px;white-space:nowrap;font-style:normal;text-transform:none}
 .toast-copy{position:fixed;left:50%;bottom:5.5rem;transform:translateX(-50%);background:#243044;color:var(--text);border:2px solid var(--border);padding:.55rem .9rem;border-radius:10px;z-index:3000;font-weight:700;display:none}
 .toast-copy.show{display:block}
-@media(max-width:820px){#main{flex-direction:column}#detour-panel{width:100%;max-height:70dvh;border-left:none;border-top:2px solid var(--border)}}
 .marker-cluster-small,.marker-cluster-medium,.marker-cluster-large{background-clip:padding-box;background-color:rgba(90,104,122,.45)}
 .marker-cluster-small div,.marker-cluster-medium div,.marker-cluster-large div{background-color:#3c4754;color:#fff;font-weight:700;width:34px;height:34px;margin-left:5px;margin-top:5px}
 .marker-cluster span{line-height:34px}
@@ -147,6 +145,10 @@ button:disabled{opacity:.55;cursor:wait}
 </style>
 </head>
 <body>
+<div id="map-stage">
+  <div id="pick-banner"></div>
+  <div id="map" role="application" aria-label="Charger map"></div>
+</div>
 <div id="topbar">
   <h1>DC chargers 50 kW+ · Canada &amp; US</h1>
   <button type="button" id="btn-locate" class="primary">Locate me</button>
@@ -185,10 +187,6 @@ button:disabled{opacity:.55;cursor:wait}
   <div id="route-summary"></div>
 </div>
 <div id="main">
-  <div id="map-stage">
-    <div id="pick-banner"></div>
-    <div id="map" role="application" aria-label="Charger map"></div>
-  </div>
   <aside id="detour-panel" aria-label="Chargers along route">
     <header>
       <h2 id="detour-heading">Chargers on the way</h2>
