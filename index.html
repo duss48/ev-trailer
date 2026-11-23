@@ -97,7 +97,13 @@ button:disabled{opacity:.55;cursor:wait}
 .popup-trailer.yes,.popup-range.ok{color:#7dffa8} .popup-trailer.maybe,.popup-range.tight{color:#ffe08a} .popup-trailer.no,.popup-range.oor{color:#ffb4b4}
 .popup-links{display:grid;grid-template-columns:1fr;gap:.45rem;margin:.65rem 0 .35rem}
 .popup-links a{display:block;width:100%;text-align:center;font-weight:700;font-size:1.05rem;padding:.75rem;border-radius:10px;border:2px solid var(--border);text-decoration:none;min-height:48px;color:#fff;touch-action:manipulation;pointer-events:auto}
-.popup-links a.streetview{background:#2a5f8f;border-color:#1e4a70}
+.popup-links a.streetview,.popup-links button.streetview{background:#2a5f8f;border-color:#1e4a70;color:#fff}
+#sv-panel{display:none;position:fixed;inset:0;z-index:4000;background:#0c1218;flex-direction:column}
+#sv-panel.open{display:flex}
+#sv-bar{display:flex;flex-wrap:wrap;gap:.55rem;align-items:center;padding:.55rem .7rem;background:#1a2332;border-bottom:2px solid var(--border)}
+#sv-close{font-size:1.5rem;font-weight:700;min-height:64px;padding:.7rem 1.25rem;background:var(--blue);border-color:#1e4fbf;color:#fff}
+#sv-app{font-size:1rem;font-weight:700;color:#cde4ff;margin-left:auto}
+#sv-frame{flex:1 1 auto;width:100%;border:0;background:#000}
 .popup-links button.directions{display:block;width:100%;text-align:center;font-weight:700;font-size:1.05rem;padding:.75rem;border-radius:10px;min-height:48px;color:#fff;background:#3d5a40;border:2px solid #2d4530;touch-action:manipulation}
 #steps-panel{display:none;background:#121821;border-top:2px solid var(--border);padding:.85rem .9rem 1.1rem;font-style:normal;text-transform:none}
 #steps-panel.show{display:block}
@@ -230,6 +236,13 @@ button:disabled{opacity:.55;cursor:wait}
     </select>
   </label>
   <span id="counts"></span>
+</div>
+<div id="sv-panel" hidden>
+  <div id="sv-bar">
+    <button type="button" id="sv-close">Close</button>
+    <a id="sv-app" href="#">Open in Google Maps app</a>
+  </div>
+  <iframe id="sv-frame" title="Street View" allow="fullscreen" referrerpolicy="strict-origin-when-cross-origin"></iframe>
 </div>
 <div id="modal-backdrop" aria-hidden="true"><div id="modal" role="dialog" aria-labelledby="modal-title"><h2 id="modal-title">Info</h2><div id="modal-body"></div><div class="row"><button type="button" id="modal-close">Close</button></div></div></div>
 <input type="file" id="import-file" accept="application/json,.json" hidden>
@@ -567,34 +580,58 @@ function armPopupLinks(popup){
     e.stopPropagation();
     beginRoute(btn);
   }, true);
-  // Leaflet's disableClickPropagation stops touchstart on the popup. iOS Safari
-  // then never clicks an <a> inside it, so Street View does nothing.
-  // window.open stays in the browser, where Google only shows a still photo.
-  // Sending the Maps URL through the page itself lets iOS open the Maps app.
-  function iosDevice(){
-    return /iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
-  }
   root.addEventListener('touchend', function(e){
-    const a=e.target.closest&&e.target.closest('a.streetview');
-    if(!a||!root.contains(a)) return;
-    const href=a.getAttribute('href')||a.href;
-    if(!href||href==='#') return;
+    const btn=e.target.closest&&e.target.closest('[data-sv-lat]');
+    if(!btn||!root.contains(btn)) return;
     e.preventDefault();
     e.stopPropagation();
-    a._openedByTouch=true;
-    if(iosDevice()){
-      window.location.href=href;
-      return;
-    }
-    const opened=window.open(href, '_blank', 'noopener,noreferrer');
-    if(opened) opened.opener=null;
+    beginStreetView(btn);
   }, {passive:false});
   root.addEventListener('click', function(e){
-    const a=e.target.closest&&e.target.closest('a.streetview');
-    if(!a||!a._openedByTouch) return;
-    a._openedByTouch=false;
+    const btn=e.target.closest&&e.target.closest('[data-sv-lat]');
+    if(!btn||!root.contains(btn)) return;
+    if(Date.now()-(document._svTouchAt||0)<700) return;
     e.preventDefault();
-  });
+    e.stopPropagation();
+    beginStreetView(btn);
+  }, true);
+}
+function streetViewEmbedUrl(lat, lon){
+  return 'https://www.google.com/maps/embed?origin=mfe&pb=!6m6!1m5!2m2!1d'+lat+'!2d'+lon+'!4f-0!5f1';
+}
+function streetViewAppUrl(lat, lon){
+  return 'comgooglemaps://?center='+lat+','+lon+'&mapmode=streetview';
+}
+function streetViewWebUrl(lat, lon){
+  return 'https://www.google.com/maps/@?api=1&map_action=pano&viewpoint='+lat+','+lon;
+}
+function beginStreetView(el){
+  if(document._svBusy) return;
+  document._svBusy=true;
+  document._svTouchAt=Date.now();
+  setTimeout(function(){ document._svBusy=false; }, 800);
+  const lat=Number(el.getAttribute('data-sv-lat'));
+  const lon=Number(el.getAttribute('data-sv-lon'));
+  if(!isFinite(lat)||!isFinite(lon)) return;
+  openStreetView(lat, lon);
+}
+function openStreetView(lat, lon){
+  const panel=document.getElementById('sv-panel');
+  const frame=document.getElementById('sv-frame');
+  const app=document.getElementById('sv-app');
+  frame.src=streetViewEmbedUrl(lat, lon);
+  app.href=streetViewAppUrl(lat, lon);
+  app.dataset.fallback=streetViewWebUrl(lat, lon);
+  panel.hidden=false;
+  panel.classList.add('open');
+}
+function closeStreetView(){
+  const panel=document.getElementById('sv-panel');
+  if(!panel) return;
+  panel.classList.remove('open');
+  panel.hidden=true;
+  const frame=document.getElementById('sv-frame');
+  if(frame) frame.removeAttribute('src');
 }
 function syncPopupColorState(id, col){
   const popup=document.querySelector('.leaflet-popup');
@@ -736,7 +773,6 @@ function chargerLine(s){
 function popupHtml(s){
   const col=getColor(s.id);
   const lat=Number(s.lat), lon=Number(s.lon);
-  const streetView=`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lon}`;
   const mapsPlace=`https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
   const det=detourById.get(s.id);
   const detourLine=det?`<p class="popup-detour">+${Math.round(det.addedSec/60)} min detour · ${formatKm(det.alongM)} into trip</p>`:'';
@@ -752,7 +788,7 @@ function popupHtml(s){
     <p class="popup-chargers">${escapeHtml(chargerLine(s))}</p>
     <div class="popup-links">
       <button type="button" class="directions" data-route-lat="${lat}" data-route-lon="${lon}" data-route-name="${escapeHtml(s.name)}">Directions</button>
-      <a class="streetview" href="${escapeHtml(streetView)}" target="_blank" rel="noopener noreferrer">Street View</a>
+      <button type="button" class="streetview" data-sv-lat="${lat}" data-sv-lon="${lon}">Street View</button>
     </div>
     <a class="popup-address" href="${escapeHtml(mapsPlace)}" target="_blank" rel="noopener noreferrer" data-copy-address="${escapeHtml(s.address)}">${escapeHtml(s.address||(lat+', '+lon))}</a>
     <p class="popup-meta"><strong>Where:</strong> ${escapeHtml(s.city||"")} ${escapeHtml(s.prov||"")} ${escapeHtml(s.country||"")}</p>
@@ -1825,6 +1861,12 @@ document.addEventListener('click', async (e)=>{
       return;
     }
   }
+  const svBtn=e.target.closest('[data-sv-lat]');
+  if(svBtn){
+    if(Date.now()-(document._svTouchAt||0)<700) return;
+    beginStreetView(svBtn);
+    return;
+  }
   const routeBtn=e.target.closest('[data-route-lat]');
   if(routeBtn){
     if(Date.now()-(document._routeTouchAt||0)<700) return;
@@ -1843,6 +1885,11 @@ function applyColorTag(btn){
   saveColors(); recolourMarker(id);
 }
 document.addEventListener('touchend', (e)=>{
+  const svBtn=e.target.closest&&e.target.closest('[data-sv-lat]');
+  if(svBtn){
+    beginStreetView(svBtn);
+    return;
+  }
   const routeBtn=e.target.closest&&e.target.closest('[data-route-lat]');
   if(routeBtn){
     if(document._routeBusy) return;
@@ -1893,6 +1940,19 @@ document.getElementById('f-country').addEventListener('change', applyFilters);
 document.getElementById('btn-a-plus').onclick=()=>setFont(fontPx+2);
 document.getElementById('btn-a-minus').onclick=()=>setFont(fontPx-2);
 document.getElementById('modal-close').onclick=closeModal;
+document.getElementById('sv-close').onclick=closeStreetView;
+document.getElementById('sv-app').addEventListener('click', function(e){
+  const fallback=this.dataset.fallback;
+  const appHref=this.getAttribute('href');
+  e.preventDefault();
+  if(!appHref||appHref==='#'){ if(fallback) window.open(fallback,'_blank','noopener,noreferrer'); return; }
+  const start=Date.now();
+  window.location.href=appHref;
+  setTimeout(function(){
+    if(document.hidden) return;
+    if(Date.now()-start<2500 && fallback) window.open(fallback,'_blank','noopener,noreferrer');
+  }, 900);
+});
 document.getElementById('modal-backdrop').addEventListener('click',e=>{ if(e.target.id==='modal-backdrop') closeModal(); });
 document.getElementById('btn-settings').onclick=()=>{ fillSettingsForm(); document.getElementById('settings').classList.add('open'); };
 document.getElementById('btn-settings-close').onclick=()=>document.getElementById('settings').classList.remove('open');
